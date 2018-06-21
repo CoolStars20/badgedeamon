@@ -1,0 +1,40 @@
+\documentclass{article}
+\usepackage[inner=2cm,outer=2cm,bottom=1cm,top=1.5cm,headsep=0cm]{geometry}
+%\usepackage[utf8]{inputenc}
+\usepackage[export]{adjustbox}
+%\usepackage{graphicx}
+%\usepackage{hyperref}
+%\usepackage[T1]{fontenc}
+%\usepackage{showframe}
+
+\renewcommand{\familydefault}{\sfdefault}
+
+\begin{document}
+
+\fbox{
+  \begin{minipage}[h][5in][c]{3in}
+     \begin{minipage}[h][.6in][b]{3in}
+      \begin{centering}
+        %\begin{figure}[b]
+        \includegraphics[max height=.6in, max width=\textwidth]{csheader}\\
+        %\end{figure} 
+      \end{centering}
+    \end{minipage}   
+    \begin{minipage}[t][1.4in][c]{3in}
+      \begin{centering}
+        \fontsize{1cm}{1.cm}\selectfont
+        \textbf{H. M. Günther}\\[2mm]
+        \Large \textbf{MIT}\\
+      \end{centering}
+    \end{minipage}
+    \begin{minipage}[h][3in][c]{3in}
+      \begin{centering}
+        %\begin{figure}[b]
+        \includegraphics[max height=3in, max width=\textwidth]{nhav}\\
+        %\end{figure} 
+      \end{centering}
+    \end{minipage}
+  \end{minipage}
+}
+\end{document}
+
