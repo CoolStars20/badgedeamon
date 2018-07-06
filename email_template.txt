@@ -1,0 +1,44 @@
+Dear {{name}},
+
+{% if warntext %}
+Processing your previous email returned:
+{{warntext}}
+{% endif %}
+
+We are looking forward to meeting you at Cool Stars 20 in Boston. Attached is
+a draft version of your conference badge. On the badge, there is space for one
+image that you can submit (see below), e.g. an exciting image of a star forming
+region, a spectrum of your favorite object, or a lightcurve of your new
+eclipsing L-dwarf binary system.
+
+
+We hope that this serves as a conversation starter during the meeting ("So,
+tell me what this plot means...").
+
+To change anything on your badge, just reply to this email without changing the
+number in the subject line.
+
+TO CORRECT YOUR NAME, put a line of text in your reply (unicode or LaTeX markup
+should work) that starts with "REPLACE NAME: " like this:
+
+REPLACE NAME: Mr. E. Xample
+
+TO CORRECT YOUR AFFILIATION, put a line of text in your reply (unicode or
+LaTeX markup should work) that starts with "REPLACE AFFILIATION:" like this:
+
+REPLACE AFFILIATION: Institute of Example
+
+TO CHANGE THE IMAGE, simply attach a jpeg, png, or pdf file to your reply.
+
+Our friendly bot will reply to you with a new badge and you can iterate until
+you are happy. 
+
+Please contact hgunther@mit.edu for assistance.
+
+(If you are interested, the script for this bot is on github at
+https://github.com/CoolStars20/badgedeamon .)
+
+Yours,
+
+Moritz
+(LOC)

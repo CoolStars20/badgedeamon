@@ -1,55 +1,53 @@
-import sys
 import os
 import smtplib
 import subprocess
 import shutil
-from warnings import warn
 from tempfile import TemporaryDirectory
 from email.message import EmailMessage
 import re
-from datetime import datetime
-from jinja2 import Environment, FileSystemLoader, select_autoescape
-from astropy.table import Table
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from jinja2 import Environment, FileSystemLoader
 import sqlite3
 import imaplib
+import email
 
 reg_subject = re.compile('\[#(?P<id>[0-9]+)\]')
-reg_newname = re.compile('REPLACE NAME: (?!Mr. E. Xample)(?P<name>[\w\s]+)')
-reg_newaffiliation = re.compile('REPLACE AFFILIATION: (?!Institute of Example)(?P<affil>[\w\s]+)')
+reg_newname = re.compile('REPLACE NAME:(?!Mr. E. Xample)(?P<name>[\S\s]+)', re.IGNORECASE)
+reg_newaffiliation = re.compile('REPLACE AFFILIATION:(?!Institute of Example)(?P<affil>[\S\s]+)', re.IGNORECASE)
 badge_images = '/melkor/d1/guenther/projects/cs20/badgeimages'
 ready_badges = '/melkor/d1/guenther/projects/cs20/badges/'
 default_image = '/melkor/d1/guenther/projects/cs20/badgedeamon/Cs20logoround.png'
 default_image = '/melkor/d1/guenther/projects/cs20/badgedeamon/kitty.jpeg'
 textemplate = 'badge_template.tex'
+selfpath = os.path.dirname(__file__)
 
-with open('../../gmail.txt') as f:
+# Load password
+with open(os.path.join(selfpath, '..', 'gmail.txt')) as f:
     password = f.read()
 password = password[:-1]
 
-conn = sqlite3.connect('badges.db')
-c = conn.cursor()
+# set up jinja
+env = Environment(loader=FileSystemLoader([selfpath]))
 
 
-def send_email(msg):
+def send_emails(msg):
     with smtplib.SMTP('smtp.gmail.com', 587) as s:
         s.ehlo()
         s.starttls()
-        s.login(msg['From'], password)
-    s.send_message(msg)
+        s.login(msg[0]['From'], password)
+        for m in msg:
+            s.send_message(m)
 
 
-def test_regid_known(regid):
-    c.execute('SELECT COUNT(*) FROM badges WHERE regid = ?', regid)
+def test_regid_known(c, regid):
+    c.execute('SELECT COUNT(*) FROM badges WHERE regid = ?', [str(regid)])
     return c.fetchone()[0] == 1
 
 
-def find_save_name_inst(regid, mail):
+def find_name_inst(regid, mail):
     textplain = None
     texthtml = None
     name = None
-    affile = None
+    affil = None
     for part in mail.walk():
         if part.get_content_maintype() == 'text':
             if part.get_content_subtype() == 'plain':
@@ -69,7 +67,7 @@ def find_save_name_inst(regid, mail):
             m = reg_newname.match(l)
             a = reg_newaffiliation.match(l)
             if m is not None:
-                name = m['Name']
+                name = m['name']
             if a is not None:
                 affil = a['affil']
         return name, affil
@@ -88,10 +86,10 @@ def find_first_suitable_image(regid, mail):
         fileName = part.get_filename()
         if bool(fileName):
             extension = fileName.split('.')[-1]
-            if extension.lower() not in ['jpg', 'jpeg', 'png']:
+            if extension.lower() not in ['jpg', 'jpeg', 'png', 'pdf']:
                 continue
             else:
-                filePath = os.path.join(badge_images, reg_id + '_' + fileName)
+                filePath = os.path.join(badge_images, regid + '_' + fileName)
                 if image is None:
                     with open(filePath, 'wb') as fp:
                         fp.write(part.get_payload(decode=True))
@@ -104,42 +102,77 @@ def find_first_suitable_image(regid, mail):
 
 
 def compile_pdf(regid, dat):
-    template = env.get_template('badge.tex')
+    template = env.get_template('badge_template.tex')
     with TemporaryDirectory() as tempdir:
         with open(os.path.join(tempdir, 'badge_{}.tex'.format(regid)), "w") as tex_out:
             tex_out.write(template.render(dat=dat))
-
-        out = 'Rerun'
-        while 'Rerun' in str(out):
-            latex = subprocess.Popen(['xelatex', '-interaction=nonstopmode',
-                                      os.path.join(tempdir, 'abstract')],
-                                     cwd=tempdir,
-                                     stdout=subprocess.PIPE)
-            out, err = latex.communicate()
+        shutil.copy(os.path.join(selfpath, 'csheader.jpg'), tempdir)
+        latex = subprocess.Popen(['pdflatex', '-interaction=nonstopmode',
+                                  'badge_{}.tex'.format(regid)],
+                                 cwd=tempdir,
+                                 stdout=subprocess.PIPE)
+        out, err = latex.communicate()
         shutil.copy(os.path.join(tempdir, 'badge_{}.pdf'.format(regid)),
                     ready_badges)
 
 
-def compose_email(email, regid, warntext=''):
+def compose_email(emailaddr, regid, name, warntext=''):
+    template = env.get_template('email_template.txt')
+    # Create the container email message.
+    msg = EmailMessage()
+    msg['From'] = 'coolstarsbot@gmail.com'
+    msg['To'] = emailaddr
+    msg['Subject'] = 'CS20 badge for [#{}]'.format(regid)
+    msg.set_content(template.render(name=name, warntext=warntext))
+    msg.preamble = 'HTML and PDF files are attached, but it seems your email reader is not MIME aware.\n'
+
+    with open(os.path.join(ready_badges, 'badge_{}.pdf'.format(regid)), 'rb') as fp:
+            pdf_data = fp.read()
+    msg.add_attachment(pdf_data,
+                       filename='abstract.pdf',
+                       maintype='application', subtype='pdf')
+    return msg
 
 
-imapSession = imaplib.IMAP4_SSL('imap.gmail.com')
-typ, accountDetails = imapSession.login('coolstarsbot@gmail.com', password)
-    if typ != 'OK':
-        raise Exception('Not able to sign in!')
+def prepare_badge_email(c, regid, warntext=''):
+    if not test_regid_known(c, regid):
+        raise ValueError('regid {} unknown'.format(regid))
 
-    imapSession.select('Inbox')
-    typ, data = imapSession.search(None, 'unseen')
-    if typ != 'OK':
-        raise Exception('Error searching Inbox.')
+    c.execute('SELECT * FROM badges WHERE regid=?', [str(regid)])
+    regid, name, affil, image, emailaddr = c.fetchone()
+    if image == 'default':
+        image = default_image
+    if affil == '':
+        affil = 'affiliation here'
+    compile_pdf(regid, {'image': image, 'name': name, 'inst': affil,
+                        'warntext': warntext})
+    return compose_email(emailaddr, regid, name)
 
-    for msgId in data[0].split():
 
-        attachment_found = []
-        typ, messageParts = imapSession.fetch(msgId, '(RFC822)')
+def email_for_regids(c, regids):
+    send_emails([prepare_badge_email(c, r) for r in regids])
+
+
+def retrieve_new_messages():
+    messagelist = []
+    with imaplib.IMAP4_SSL('imap.gmail.com') as imapSession:
+        typ, accountDetails = imapSession.login('coolstarsbot@gmail.com', password)
         if typ != 'OK':
-            raise Exception('Error fetching mail.')
+            raise Exception('Not able to sign in!')
+        imapSession.select('Inbox')
+        typ, data = imapSession.search(None, 'unseen')
+        if typ != 'OK':
+            raise Exception('Error searching Inbox.')
+        for msgId in data[0].split():
+            typ, messageParts = imapSession.fetch(msgId, '(RFC822)')
+            if typ != 'OK':
+                raise Exception('Error fetching mail.')
+            messagelist.append(messageParts)
+    return messagelist
 
+
+def process_new_messages(conn, c, messages):
+    for messageParts in messages:
         emailBody = messageParts[0][1]
         mail = email.message_from_bytes(emailBody)
         match = reg_subject.search(mail['SUBJECT'])
@@ -147,15 +180,15 @@ typ, accountDetails = imapSession.login('coolstarsbot@gmail.com', password)
             # Header does not have message ID in it -> forward to Moritz
             mail.replace_header('From', 'coolstarsbot@gmail.com')
             mail.replace_header('To', 'hgunther@mit.edu')
-            send_email(mail)
+            send_emails([mail])
         else:
             regid = match['id']
-            if not test_regid_known(regid):
+            if not test_regid_known(c, regid):
                 mail.replace_header('From', 'coolstarsbot@gmail.com')
                 mail.replace_header('To', 'hgunther@mit.edu')
-                send_email(mail)
+                send_emails([mail])
             else:
-                image, warntext = find_save_first_suitable_image(regid, mail)
+                image, warntext = find_first_suitable_image(regid, mail)
                 name, inst = find_name_inst(regid, mail)
                 if image is not None:
                     c.execute('UPDATE badges SET image=? WHERE regid=?', (image, regid))
@@ -163,9 +196,14 @@ typ, accountDetails = imapSession.login('coolstarsbot@gmail.com', password)
                     c.execute('UPDATE badges SET name=? WHERE regid=?', (name, regid))
                 if inst is not None:
                     c.execute('UPDATE badges SET affil=? WHERE regid=?', (inst, regid))
+                conn.commit()
+                msg = prepare_badge_email(c, regid, warntext)
+                send_emails([msg])
 
-                c.execute('SELECT * FROM badges WHERE regid=?', regid)
-                regid, name, affil, image, email = c.fetchone()
-                if image == 'default':
-                    image = default_image
-                compile_pdf(regid, {'image': image, 'name': name, 'inst': inst})
+
+if __name__ == '__main__':
+    # set up sqlite
+    messages = retrieve_new_messages()
+    with sqlite3.connect(os.path.join(selfpath, 'badges.db')) as conn:
+        c = conn.cursor()
+        process_new_messages(conn, c, messages)

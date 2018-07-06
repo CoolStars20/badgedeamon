@@ -1,10 +1,10 @@
 \documentclass{article}
 \usepackage[inner=2cm,outer=2cm,bottom=1cm,top=1.5cm,headsep=0cm]{geometry}
-%\usepackage[utf8]{inputenc}
+\usepackage[utf8]{inputenc}
 \usepackage[export]{adjustbox}
 %\usepackage{graphicx}
 %\usepackage{hyperref}
-%\usepackage[T1]{fontenc}
+\usepackage[T1]{fontenc}
 %\usepackage{showframe}
 
 \renewcommand{\familydefault}{\sfdefault}
@@ -23,14 +23,14 @@
     \begin{minipage}[t][1.4in][c]{3in}
       \begin{centering}
         \fontsize{1cm}{1.cm}\selectfont
-        \textbf{H. M. Günther}\\[2mm]
-        \Large \textbf{MIT}\\
+        \textbf{ {{dat['name']}} }\\[2mm]
+        \Large \textbf{ {{dat['inst'] | default('affiliation unkown')}} }\\
       \end{centering}
     \end{minipage}
     \begin{minipage}[h][3in][c]{3in}
       \begin{centering}
         %\begin{figure}[b]
-        \includegraphics[max height=3in, max width=\textwidth]{nhav}\\
+        \includegraphics[max height=3in, max width=\textwidth]{{'{'}}{{dat['image']}}{{'}'}}\\
         %\end{figure} 
       \end{centering}
     \end{minipage}
