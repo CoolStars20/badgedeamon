@@ -43,6 +43,25 @@ def test_regid_known(c, regid):
     return c.fetchone()[0] == 1
 
 
+def clean_tex(tex, maxlen=35):
+    '''LaTeX can be used to execute arbitrary commands.
+    While a full sanatizing might be impossible, we use an approach here that
+    blacklists the most dangerous commands AND puts a very restrictive length requirement
+    on the string. All blacklists can be circumvented, but that requires a number
+    of commands and should not be possible within 30 characters or so.
+
+    see: https://0day.work/hacking-with-latex/
+    '''
+    blacklist = ['input', 'include', 'write18', 'immediate', 'def']:
+    for b in blacklist:
+        if '\\' + b in tex:
+            return None, 'For security reasons LaTeX command {} is disabled in this script. Contact us by email if you really need it for your badge.'.format(b)
+
+    if len(tex) > maxlen:
+        return None, 'For security reaons, the text (incl. LaTeX commands) can only contain {} characters - yours has {} characters. And besides, there is not that much space on the badge anyway. Contact us by email is there really is no way to fit your text into those character limits.'.format(maxlen, len(tex))
+
+    return tex, ''
+
 def find_name_inst(regid, mail):
     textplain = None
     texthtml = None
@@ -70,7 +89,9 @@ def find_name_inst(regid, mail):
                 name = m['name']
             if a is not None:
                 affil = a['affil']
-        return name, affil
+        name, wtext1 = clean_tex(name)
+        affil, wtext2 = clean_tex(affil)
+        return name, affil, wtext1 + wtext2
 
 
 def find_first_suitable_image(regid, mail):
@@ -108,6 +129,7 @@ def compile_pdf(regid, dat):
             tex_out.write(template.render(dat=dat))
         shutil.copy(os.path.join(selfpath, 'csheader.jpg'), tempdir)
         latex = subprocess.Popen(['pdflatex', '-interaction=nonstopmode',
+                                  '-no-shell-escape',
                                   'badge_{}.tex'.format(regid)],
                                  cwd=tempdir,
                                  stdout=subprocess.PIPE)
@@ -189,7 +211,7 @@ def process_new_messages(conn, c, messages):
                 send_emails([mail])
             else:
                 image, warntext = find_first_suitable_image(regid, mail)
-                name, inst = find_name_inst(regid, mail)
+                name, inst, warntext = find_name_inst(regid, mail)
                 if image is not None:
                     c.execute('UPDATE badges SET image=? WHERE regid=?', (image, regid))
                 if name is not None:
