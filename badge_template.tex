@@ -1,8 +1,7 @@
 \documentclass{article}
 \usepackage[inner=2cm,outer=2cm,bottom=1cm,top=1.5cm,headsep=0cm]{geometry}
 \usepackage[utf8]{inputenc}
-\usepackage[export]{adjustbox}
-%\usepackage{graphicx}
+\usepackage{graphicx}
 %\usepackage{hyperref}
 \usepackage[T1]{fontenc}
 %\usepackage{showframe}
@@ -16,7 +15,7 @@
      \begin{minipage}[h][.6in][b]{3in}
       \begin{centering}
         %\begin{figure}[b]
-        \includegraphics[max height=.6in, max width=\textwidth]{csheader}\\
+        \includegraphics[height=.6in, width=\textwidth, keepaspectratio]{csheader}\\
         %\end{figure} 
       \end{centering}
     \end{minipage}   
@@ -30,7 +29,7 @@
     \begin{minipage}[h][3in][c]{3in}
       \begin{centering}
         %\begin{figure}[b]
-        \includegraphics[max height=3in, max width=\textwidth]{{'{'}}{{dat['image']}}{{'}'}}\\
+        \includegraphics[height=3in, width=\textwidth, keepaspectratio]{{'{'}}{{dat['image']}}{{'}'}}\\
         %\end{figure} 
       \end{centering}
     \end{minipage}
