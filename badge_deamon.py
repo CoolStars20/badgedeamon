@@ -11,8 +11,9 @@ import imaplib
 import email
 
 reg_subject = re.compile('\[#(?P<id>[0-9]+)\]')
-reg_newname = re.compile('REPLACE NAME:(?!Mr. E. Xample)(?P<name>[\S\s]+)', re.IGNORECASE)
-reg_newaffiliation = re.compile('REPLACE AFFILIATION:(?!Institute of Example)(?P<affil>[\S\s]+)', re.IGNORECASE)
+reg_newpronoun = re.compile('BADGE PRONOUN:(?P<pronoun>[\S\s]+)', re.IGNORECASE)
+reg_newname = re.compile('BADGE NAME:(?P<name>[\S\s]+)', re.IGNORECASE)
+reg_newaffiliation = re.compile('BADGE AFFILIATION:(?!Institute of Example)(?P<affil>[\S\s]+)', re.IGNORECASE)
 badge_images = '/melkor/d1/guenther/projects/cs20/badgeimages'
 ready_badges = '/melkor/d1/guenther/projects/cs20/badges/'
 default_image = '/melkor/d1/guenther/projects/cs20/badgedeamon/Cs20logoround.png'
@@ -52,17 +53,18 @@ def clean_tex(tex, maxlen=35):
 
     see: https://0day.work/hacking-with-latex/
     '''
-    blacklist = ['input', 'include', 'write18', 'immediate', 'def']:
+    blacklist = ['input', 'include', 'write18', 'immediate', 'def']
     for b in blacklist:
         if '\\' + b in tex:
             return None, 'For security reasons LaTeX command {} is disabled in this script. Contact us by email if you really need it for your badge.'.format(b)
 
     if len(tex) > maxlen:
-        return None, 'For security reaons, the text (incl. LaTeX commands) can only contain {} characters - yours has {} characters. And besides, there is not that much space on the badge anyway. Contact us by email is there really is no way to fit your text into those character limits.'.format(maxlen, len(tex))
+        return None, 'For security reaons, each field of can only contain {} characters (inlc. LaTeX markup)- yours is longer: . And besides, there is not that much space on the badge anyway. Contact us by email is there really is no way to fit your text into those character limits.'.format(maxlen, tex)
 
     return tex, ''
 
-def find_name_inst(regid, mail):
+
+def find_name_inst_pronoun(regid, mail):
     textplain = None
     texthtml = None
     name = None
@@ -83,19 +85,23 @@ def find_name_inst(regid, mail):
     else:
         text = texthtml if (textplain is None) else textplain
         for l in text:
+            p = reg_newpronoun.match(l)
             m = reg_newname.match(l)
             a = reg_newaffiliation.match(l)
+            if p is not None:
+                pronoun = p['pronoun']
             if m is not None:
                 name = m['name']
             if a is not None:
                 affil = a['affil']
+        pronoun, wtext0 = clean_tex(pronoun)
         name, wtext1 = clean_tex(name)
         affil, wtext2 = clean_tex(affil)
-        return name, affil, wtext1 + wtext2
+        return pronoun, name, affil, wtext0 + wtext1 + wtext2
 
 
-def find_first_suitable_image(regid, mail):
-    image = None
+def find_firstsecond_suitable_image(regid, mail):
+    image = [None, None]
     warntext = ''
     for part in mail.walk():
         if part.get_content_maintype() == 'multipart':
@@ -110,14 +116,20 @@ def find_first_suitable_image(regid, mail):
             if extension.lower() not in ['jpg', 'jpeg', 'png', 'pdf']:
                 continue
             else:
-                filePath = os.path.join(badge_images, regid + '_' + fileName)
-                if image is None:
+                if image[0] is None:
+                    filePath = os.path.join(badge_images, regid + '_front_' + fileName)
                     with open(filePath, 'wb') as fp:
                         fp.write(part.get_payload(decode=True))
-                    image = filePath
+                    image[0] = filePath
+                elif image[1] is None:
+                    filePath = os.path.join(badge_images, regid + '_back_' + fileName)
+                    with open(filePath, 'wb') as fp:
+                        fp.write(part.get_payload(decode=True))
+                    image[1] = filePath
+
                 else:
-                    warntext = "More than one image file was attached to your message. I'm using the first one of those for your badge.\n"
-    if image is None:
+                    warntext = "More than two images file were attached to your message. I'm using the first and second of those for your badge.\n"
+    if image[0] is None:
         warntext = "No file ending on 'jpg', 'jpeg' or 'png' was attached to your email. I'm using whatever file you previously submitted or (if you did not submit a file with a previous email) a default image.\n"
     return image, warntext
 
@@ -128,6 +140,7 @@ def compile_pdf(regid, dat):
         with open(os.path.join(tempdir, 'badge_{}.tex'.format(regid)), "w") as tex_out:
             tex_out.write(template.render(dat=dat))
         shutil.copy(os.path.join(selfpath, 'csheader.jpg'), tempdir)
+        shutil.copy(os.path.join(selfpath, 'csheader_narrow.jpg'), tempdir)
         latex = subprocess.Popen(['pdflatex', '-interaction=nonstopmode',
                                   '-no-shell-escape',
                                   'badge_{}.tex'.format(regid)],
@@ -136,16 +149,18 @@ def compile_pdf(regid, dat):
         out, err = latex.communicate()
         shutil.copy(os.path.join(tempdir, 'badge_{}.pdf'.format(regid)),
                     ready_badges)
+        shutil.copy(os.path.join(tempdir, 'badge_{}.tex'.format(regid)),
+                    ready_badges)
 
 
-def compose_email(emailaddr, regid, name, warntext=''):
+def compose_email(emailaddr, regid, pronoun, name, affil, warntext=''):
     template = env.get_template('email_template.txt')
     # Create the container email message.
     msg = EmailMessage()
     msg['From'] = 'coolstarsbot@gmail.com'
     msg['To'] = emailaddr
     msg['Subject'] = 'CS20 badge for [#{}]'.format(regid)
-    msg.set_content(template.render(name=name, warntext=warntext))
+    msg.set_content(template.render(pronoun=pronoun, name=name, affil=affil, warntext=warntext))
     msg.preamble = 'HTML and PDF files are attached, but it seems your email reader is not MIME aware.\n'
 
     with open(os.path.join(ready_badges, 'badge_{}.pdf'.format(regid)), 'rb') as fp:
@@ -161,14 +176,15 @@ def prepare_badge_email(c, regid, warntext=''):
         raise ValueError('regid {} unknown'.format(regid))
 
     c.execute('SELECT * FROM badges WHERE regid=?', [str(regid)])
-    regid, name, affil, image, emailaddr = c.fetchone()
+    regid, pronoun, name, affil, image1, image2, emailaddr, title = c.fetchone()
     if image == 'default':
         image = default_image
     if affil == '':
         affil = 'affiliation here'
-    compile_pdf(regid, {'image': image, 'name': name, 'inst': affil,
+    compile_pdf(regid, {'image1': image1, 'image2': image2, 'pronoun': pronoun,
+                        'name': name, 'inst': affil,
                         'warntext': warntext})
-    return compose_email(emailaddr, regid, name)
+    return compose_email(emailaddr, regid, pronoun, name, affil)
 
 
 def email_for_regids(c, regids):
@@ -210,10 +226,16 @@ def process_new_messages(conn, c, messages):
                 mail.replace_header('To', 'hgunther@mit.edu')
                 send_emails([mail])
             else:
-                image, warntext = find_first_suitable_image(regid, mail)
-                name, inst, warntext = find_name_inst(regid, mail)
-                if image is not None:
-                    c.execute('UPDATE badges SET image=? WHERE regid=?', (image, regid))
+                image, warntext = find_firstsecond_suitable_image(regid, mail)
+                pronoun, name, inst, warntext = find_pronoun_name_inst(regid, mail)
+                if image[0] is not None:
+                    # If only one image is submitted, use that for both sides
+                    if image[1] is None:
+                        image[1] = image[0]
+                    c.execute('UPDATE badges SET image1=? WHERE regid=?', (image[0], regid))
+                    c.execute('UPDATE badges SET image2=? WHERE regid=?', (image[1], regid))
+                if pronoun is not None:
+                    c.execute('UPDATE badges SET pronoun=? WHERE regid=?', (pronoun, regid))
                 if name is not None:
                     c.execute('UPDATE badges SET name=? WHERE regid=?', (name, regid))
                 if inst is not None:

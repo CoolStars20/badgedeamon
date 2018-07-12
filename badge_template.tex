@@ -1,39 +1,66 @@
+{% macro badge(image, title, dat) -%}
+\noindent
+\begin{minipage}[h][5.5in][c]{3.1in}
+{{title}}\\
+\noindent
+\fbox{
+  \begin{minipage}[h][5in][c]{3in}
+     \noindent
+      {% if dat['type'] %}
+       \begin{minipage}[h][.6in][b]{1.6in}
+        \includegraphics[height=.6in, keepaspectratio]{csheader_narrow}
+        \end{minipage}\begin{minipage}[h][.6in][b]{1.4in}
+        \begin{centering}
+        \huge
+        \vspace*{\fill} 
+        \noindent
+        \textbf{{'{'}}{{dat['type']}}{{'}'}}\\
+        \vspace*{\fill} 
+        \end{centering}
+        \end{minipage}
+      {% else %}
+      \begin{minipage}[h][.6in][b]{3in}
+      \begin{centering}
+        \includegraphics[height=.6in, width=\textwidth,
+          keepaspectratio]{csheader}\\
+      \end{centering}
+      \end{minipage} 
+      {% endif %}
+    \begin{minipage}[t][4.4in][c]{3in}
+      \begin{centering}
+        \vspace{ \stretch{.3} }
+        {% if dat['pronoun'] %}
+          \large {{dat['pronoun']}}
+          \vspace{ \stretch{.1} }
+        {% endif %}
+        \fontsize{1cm}{1.cm}\selectfont
+        \textbf{ {{dat['name']}} }\\[2mm]
+        \vspace{ \stretch{.1} }
+        \Large \textbf{ {{dat['inst'] | default('affiliation unkown')}} }\\
+        \vfill
+        \includegraphics[height=3in, width=\textwidth,
+          keepaspectratio]{{'{'}}{{dat[image]}}{{'}'}}\\
+        \vspace{ \stretch{.5} }
+      \end{centering}
+    \end{minipage}
+  \end{minipage}
+}\end{minipage}%
+{%- endmacro %}
+
+
 \documentclass{article}
 \usepackage[inner=2cm,outer=2cm,bottom=1cm,top=1.5cm,headsep=0cm]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
-%\usepackage{hyperref}
+\usepackage[usenames,dvipsnames]{xcolor}
 \usepackage[T1]{fontenc}
 %\usepackage{showframe}
 
 \renewcommand{\familydefault}{\sfdefault}
 
 \begin{document}
+{{badge('image1', 'Front side of badge', dat)}}
+{{badge('image2', 'Back side of badge', dat)}}
 
-\fbox{
-  \begin{minipage}[h][5in][c]{3in}
-     \begin{minipage}[h][.6in][b]{3in}
-      \begin{centering}
-        %\begin{figure}[b]
-        \includegraphics[height=.6in, width=\textwidth, keepaspectratio]{csheader}\\
-        %\end{figure} 
-      \end{centering}
-    \end{minipage}   
-    \begin{minipage}[t][1.4in][c]{3in}
-      \begin{centering}
-        \fontsize{1cm}{1.cm}\selectfont
-        \textbf{ {{dat['name']}} }\\[2mm]
-        \Large \textbf{ {{dat['inst'] | default('affiliation unkown')}} }\\
-      \end{centering}
-    \end{minipage}
-    \begin{minipage}[h][3in][c]{3in}
-      \begin{centering}
-        %\begin{figure}[b]
-        \includegraphics[height=3in, width=\textwidth, keepaspectratio]{{'{'}}{{dat['image']}}{{'}'}}\\
-        %\end{figure} 
-      \end{centering}
-    \end{minipage}
-  \end{minipage}
-}
 \end{document}
 
