@@ -1,30 +1,33 @@
 import sqlite3
 import numpy as np
+from astropy.table import Table
 
-conn = sqlite3.connect('example.db')
+tab = Table.read('../data/reglist3.csv')
 
+conn = sqlite3.connect('badges.db')
 c = conn.cursor()
 # Create table
 c.execute('''CREATE TABLE badges
              (regid integer, pronoun text, name text, affil text, image1 text, image2 text, email text, title text)''')
-# Split by both ; and , to make short enough
-tab3['affil'] = ['' if r is np.ma.masked else r.split(';')[0].split(',')[0].strip() for r in tab3['Affiliations']]
 
-# got tab3 from match_reglists script
-for row in tab3:
-    c.execute("INSERT INTO badges VALUES (?, ?, ?, ?, ?)",
+tab['Institution'][tab['Institution'].mask] = ''
+
+for row in tab:
+    text = ''
+    if row['days']:
+        text = row['days']
+    if row['group']:
+        text = row['group']
+    c.execute("INSERT INTO badges VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
               (
-                  row['Tran#'],
+                  int(row['Tran#']),
                   '',  # Default is no pronoun
-                  row['First author'] if not row['First author'] is np.ma.masked else ' '.join((row['First Name'], row['Last Name'])),
-                  row['affil'],
-                  "default",
-                  "default"
+                  row['First Name'] + ' ' + row['Last Name'],
+                  row['Institution'],
+                  "default1.png",
+                  "default2.jpeg",
                   row['Email Address'],
-                  ''))  # LOC, SOC, Mon/Tue, ...
-
-tab3['First author', 'First Name', 'Last Name', 'Tran#', 'affil', 'Email Address']
-
+                  text))  # LOC, SOC, Mon/Tue, ...
 
 conn.commit()
 conn.close()

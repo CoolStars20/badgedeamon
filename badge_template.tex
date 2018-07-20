@@ -1,46 +1,47 @@
 {% macro badge(image, title, dat) -%}
 \noindent
-\begin{minipage}[h][5.5in][c]{3.1in}
+\begin{minipage}[h][6.2in][c]{4.2in}
 {{title}}\\
+\vspace{.2in}
 \noindent
 \fbox{
-  \begin{minipage}[h][5in][c]{3in}
-     \noindent
-       \begin{minipage}[h][.6in][b]{3in}
-      \begin{centering}
-        \includegraphics[height=.6in, width=\textwidth,
+\begin{minipage}[h][6.2in][c]{4.2in}
+\noindent
+\begin{minipage}[h][.78in][b]{4.2in}
+\begin{centering}
+\includegraphics[height=.78in, width=\textwidth,
           keepaspectratio]{csheader}\\
-      \end{centering}
-      \end{minipage}
-     {% if dat['type'] %}
-     \begin{minipage}[t][3.9in][c]{3in}
-     {% else %}
-     \begin{minipage}[t][4.4in][c]{3in}
-     {% endif %}
-      \begin{centering}
-        \vspace{ \stretch{.3} }
-        {% if dat['pronoun'] %}
-          \large {{dat['pronoun']}}
-          \vspace{ \stretch{.1} }
-        {% endif %}
-        \fontsize{1cm}{1.cm}\selectfont
-        \textbf{ {{dat['name']}} }\\[2mm]
-        \vspace{ \stretch{.1} }
-        \Large \textbf{ {{dat['inst'] | default('affiliation unkown')}} }\\
-        \vfill
-        {% if dat['type'] %}
-        \includegraphics[height=2.5in, width=\textwidth,
+\end{centering}
+\end{minipage}
+{% if dat['typetext'] %}
+\begin{minipage}[t][4.6in][c]{4.2in}
+{% else %}
+\begin{minipage}[t][5.2in][c]{4.2in}
+{% endif %}
+\begin{centering}
+\vspace{ \stretch{.3} }
+{% if dat['pronoun'] %}
+\large {{dat['pronoun']}}
+\vspace{ \stretch{.1} }
+{% endif %}
+\fontsize{1cm}{1.cm}\selectfont
+\textbf{ {{dat['name']}} }\\[2mm]
+\vspace{ \stretch{.1} }
+\Large \textbf{ {{dat['inst'] | default('affiliation unkown')}} }\\
+\vfill
+{% if dat['typetext'] %}
+\includegraphics[height=3.2in, width=0.92\textwidth,
+ keepaspectratio]{{'{'}}{{dat[image]}}{{'}'}}\\
+{% else %}
+         \includegraphics[height=3.8in, width=0.92\textwidth,
           keepaspectratio]{{'{'}}{{dat[image]}}{{'}'}}\\
-         {% else %}
-         \includegraphics[height=3in, width=\textwidth,
-          keepaspectratio]{{'{'}}{{dat[image]}}{{'}'}}\\
-        {% endif %}
+ {% endif %}
         \vspace{ \stretch{.5} }
       \end{centering}
     \end{minipage}
-    {% if dat['type'] %}
-     \begin{minipage}[t][0.5in][c]{3in}
-       \begin{tcolorbox}[width=\textwidth,colback={{'{'}}{{dat['typecolor']}}{{'}'}},colupper=white]
+    {% if dat['typetext'] %}
+     \begin{minipage}[t][0.6in][c]{4.2in}
+       \begin{tcolorbox}[width=0.98\textwidth,colback={{'{'}}{{dat['typecolor']}}{{'}'}},colupper=white]
            \centering
            {\bf \huge {{dat['typetext']}} }
          \end{tcolorbox}
@@ -51,18 +52,20 @@
 {%- endmacro %}
 
 
-\documentclass{article}
-\usepackage[inner=2cm,outer=2cm,bottom=1cm,top=1.5cm,headsep=0cm]{geometry}
+\documentclass[landscape]{article}
+\usepackage[inner=1cm,outer=1cm,bottom=1cm,top=1.5cm,headsep=0cm,landscape]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage[usenames,dvipsnames]{xcolor}
 \usepackage[T1]{fontenc}
+\usepackage{tcolorbox}
 %\usepackage{showframe}
 
 \renewcommand{\familydefault}{\sfdefault}
 
 \begin{document}
 {{badge('image1', 'Front side of badge', dat)}}
+\hspace{4mm}
 {{badge('image2', 'Back side of badge', dat)}}
 
 \end{document}

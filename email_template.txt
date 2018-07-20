@@ -3,8 +3,8 @@ Dear {{name}},
 {% if warntext %}
 Processing your previous email returned:
 {{warntext}}
-{% endif %}
 
+{% endif %}
 We are looking forward to meeting you at Cool Stars 20 in Boston. Attached is a
 draft version of your conference badge. On the badge, there is space for two
 images that you can submit (one on the front and one on the back - see below
@@ -15,10 +15,12 @@ system.  We hope that this serves as a conversation starter during the meeting
 
 You can also correct your name (e.g. missing special characters), affiliation
 (e.g. to shorten the text to make it fit), or add a list of pronouns you want
-people to use (e.g. if you identify with a non-binary gender [1]) To change
-anything on your badge, just reply to this email without changing the subject
-line **on or before July 26th**. Your email will be parsed by a program. If you need
-to contact a human about your badge, write to hgunther@mit.edu.
+people to use (e.g. if you identify with a non-binary gender [1]).
+
+To change anything on your badge, just reply to this email without changing the
+subject line **on or before July 26th**. Your email will be parsed by a
+program. If you need to contact a human about your badge, write to
+hgunther@mit.edu.
 
 TO CHANGE THE IMAGE, simply attach one or two jpeg, png, or pdf files to your
 reply.
@@ -35,9 +37,8 @@ BADGE AFFILIATION: {{affil}}
 TO CHANGE THE IMAGE, simply attach one or two jpeg, png, or pdf files to your reply.
 
 Our friendly bot will reply to you with a new badge and you can iterate until
-you are happy. 
-
-Please contact hgunther@mit.edu for assistance.
+you are happy; if you don't receive a new badge image, your email was not
+processed correctly. Please contact hgunther@mit.edu for assistance.
 
 (If you are interested, the script for this bot is on github at
 https://github.com/CoolStars20/badgedeamon .)

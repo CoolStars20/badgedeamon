@@ -16,8 +16,6 @@ reg_newname = re.compile('BADGE NAME:(?P<name>[\S\s]+)', re.IGNORECASE)
 reg_newaffiliation = re.compile('BADGE AFFILIATION:(?!Institute of Example)(?P<affil>[\S\s]+)', re.IGNORECASE)
 badge_images = '/melkor/d1/guenther/projects/cs20/badgeimages'
 ready_badges = '/melkor/d1/guenther/projects/cs20/badges/'
-default_image = '/melkor/d1/guenther/projects/cs20/badgedeamon/Cs20logoround.png'
-default_image = '/melkor/d1/guenther/projects/cs20/badgedeamon/kitty.jpeg'
 textemplate = 'badge_template.tex'
 selfpath = os.path.dirname(__file__)
 
@@ -64,7 +62,7 @@ def clean_tex(tex, maxlen=35):
     return tex, ''
 
 
-def find_name_inst_pronoun(regid, mail):
+def find_pronoun_name_inst(regid, mail):
     textplain = None
     texthtml = None
     name = None
@@ -84,19 +82,28 @@ def find_name_inst_pronoun(regid, mail):
         return None, None
     else:
         text = texthtml if (textplain is None) else textplain
+        wtext1 = ''
+        wtext2 = ''
+        wtext0 = ''
+        pronoun = None
+        name = None
+        affil = None
+        # look for first occurrence in text.
+        # Later lines are most likely just the old message attached at bottom
+        text.reverse()
         for l in text:
-            p = reg_newpronoun.match(l)
-            m = reg_newname.match(l)
-            a = reg_newaffiliation.match(l)
+            p = reg_newpronoun.search(l)
+            m = reg_newname.search(l)
+            a = reg_newaffiliation.search(l)
             if p is not None:
                 pronoun = p['pronoun']
+                pronoun, wtext0 = clean_tex(pronoun)
             if m is not None:
                 name = m['name']
+                name, wtext1 = clean_tex(name)
             if a is not None:
                 affil = a['affil']
-        pronoun, wtext0 = clean_tex(pronoun)
-        name, wtext1 = clean_tex(name)
-        affil, wtext2 = clean_tex(affil)
+                affil, wtext2 = clean_tex(affil)
         return pronoun, name, affil, wtext0 + wtext1 + wtext2
 
 
@@ -117,15 +124,17 @@ def find_firstsecond_suitable_image(regid, mail):
                 continue
             else:
                 if image[0] is None:
-                    filePath = os.path.join(badge_images, regid + '_front_' + fileName)
+                    fullfilename = regid + '_front.' + extension
+                    filePath = os.path.join(badge_images, fullfilename)
                     with open(filePath, 'wb') as fp:
                         fp.write(part.get_payload(decode=True))
-                    image[0] = filePath
+                    image[0] = fullfilename
                 elif image[1] is None:
-                    filePath = os.path.join(badge_images, regid + '_back_' + fileName)
+                    fullfilename = regid + '_back.' + extension
+                    filePath = os.path.join(badge_images, fullfilename)
                     with open(filePath, 'wb') as fp:
                         fp.write(part.get_payload(decode=True))
-                    image[1] = filePath
+                    image[1] = fullfilename
 
                 else:
                     warntext = "More than two images file were attached to your message. I'm using the first and second of those for your badge.\n"
@@ -141,6 +150,8 @@ def compile_pdf(regid, dat):
             tex_out.write(template.render(dat=dat))
         shutil.copy(os.path.join(selfpath, 'csheader.jpg'), tempdir)
         shutil.copy(os.path.join(selfpath, 'csheader_narrow.jpg'), tempdir)
+        shutil.copy(os.path.join(badge_images, dat['image1']), tempdir)
+        shutil.copy(os.path.join(badge_images, dat['image2']), tempdir)
         latex = subprocess.Popen(['pdflatex', '-interaction=nonstopmode',
                                   '-no-shell-escape',
                                   'badge_{}.tex'.format(regid)],
@@ -166,7 +177,7 @@ def compose_email(emailaddr, regid, pronoun, name, affil, warntext=''):
     with open(os.path.join(ready_badges, 'badge_{}.pdf'.format(regid)), 'rb') as fp:
             pdf_data = fp.read()
     msg.add_attachment(pdf_data,
-                       filename='abstract.pdf',
+                       filename='badge.pdf',
                        maintype='application', subtype='pdf')
     return msg
 
@@ -177,13 +188,19 @@ def prepare_badge_email(c, regid, warntext=''):
 
     c.execute('SELECT * FROM badges WHERE regid=?', [str(regid)])
     regid, pronoun, name, affil, image1, image2, emailaddr, title = c.fetchone()
-    if image == 'default':
-        image = default_image
     if affil == '':
         affil = 'affiliation here'
+    if title == 'LOC':
+        color = 'green'
+    elif title == 'SOC':
+        color = 'blue'
+    elif title == "Press":
+        color = 'red'
+    else:
+        color = 'black'
     compile_pdf(regid, {'image1': image1, 'image2': image2, 'pronoun': pronoun,
                         'name': name, 'inst': affil,
-                        'warntext': warntext})
+                        'typetext': title, 'typecolor': color})
     return compose_email(emailaddr, regid, pronoun, name, affil)
 
 
@@ -227,7 +244,7 @@ def process_new_messages(conn, c, messages):
                 send_emails([mail])
             else:
                 image, warntext = find_firstsecond_suitable_image(regid, mail)
-                pronoun, name, inst, warntext = find_pronoun_name_inst(regid, mail)
+                pronoun, name, inst, warntext2 = find_pronoun_name_inst(regid, mail)
                 if image[0] is not None:
                     # If only one image is submitted, use that for both sides
                     if image[1] is None:
@@ -241,7 +258,7 @@ def process_new_messages(conn, c, messages):
                 if inst is not None:
                     c.execute('UPDATE badges SET affil=? WHERE regid=?', (inst, regid))
                 conn.commit()
-                msg = prepare_badge_email(c, regid, warntext)
+                msg = prepare_badge_email(c, regid, warntext + ' ' + warntext2)
                 send_emails([msg])
 
 
