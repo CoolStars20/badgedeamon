@@ -17,7 +17,7 @@ You can also correct your name (e.g. missing special characters), affiliation
 (e.g. to shorten the text to make it fit), or add a list of pronouns you want
 people to use (e.g. if you identify with a non-binary gender [1]) To change
 anything on your badge, just reply to this email without changing the subject
-line **before July 24th**. Your email will be parsed by a program. If you need
+line **on or before July 26th**. Your email will be parsed by a program. If you need
 to contact a human about your badge, write to hgunther@mit.edu.
 
 TO CHANGE THE IMAGE, simply attach one or two jpeg, png, or pdf files to your

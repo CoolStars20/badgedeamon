@@ -6,27 +6,17 @@
 \fbox{
   \begin{minipage}[h][5in][c]{3in}
      \noindent
-      {% if dat['type'] %}
-       \begin{minipage}[h][.6in][b]{1.6in}
-        \includegraphics[height=.6in, keepaspectratio]{csheader_narrow}
-        \end{minipage}\begin{minipage}[h][.6in][b]{1.4in}
-        \begin{centering}
-        \huge
-        \vspace*{\fill} 
-        \noindent
-        \textbf{{'{'}}{{dat['type']}}{{'}'}}\\
-        \vspace*{\fill} 
-        \end{centering}
-        \end{minipage}
-      {% else %}
-      \begin{minipage}[h][.6in][b]{3in}
+       \begin{minipage}[h][.6in][b]{3in}
       \begin{centering}
         \includegraphics[height=.6in, width=\textwidth,
           keepaspectratio]{csheader}\\
       \end{centering}
-      \end{minipage} 
-      {% endif %}
-    \begin{minipage}[t][4.4in][c]{3in}
+      \end{minipage}
+     {% if dat['type'] %}
+     \begin{minipage}[t][3.9in][c]{3in}
+     {% else %}
+     \begin{minipage}[t][4.4in][c]{3in}
+     {% endif %}
       \begin{centering}
         \vspace{ \stretch{.3} }
         {% if dat['pronoun'] %}
@@ -38,11 +28,24 @@
         \vspace{ \stretch{.1} }
         \Large \textbf{ {{dat['inst'] | default('affiliation unkown')}} }\\
         \vfill
-        \includegraphics[height=3in, width=\textwidth,
+        {% if dat['type'] %}
+        \includegraphics[height=2.5in, width=\textwidth,
           keepaspectratio]{{'{'}}{{dat[image]}}{{'}'}}\\
+         {% else %}
+         \includegraphics[height=3in, width=\textwidth,
+          keepaspectratio]{{'{'}}{{dat[image]}}{{'}'}}\\
+        {% endif %}
         \vspace{ \stretch{.5} }
       \end{centering}
     \end{minipage}
+    {% if dat['type'] %}
+     \begin{minipage}[t][0.5in][c]{3in}
+       \begin{tcolorbox}[width=\textwidth,colback={{'{'}}{{dat['typecolor']}}{{'}'}},colupper=white]
+           \centering
+           {\bf \huge {{dat['typetext']}} }
+         \end{tcolorbox}
+       \end{minipage}
+        {% endif %}
   \end{minipage}
 }\end{minipage}%
 {%- endmacro %}
