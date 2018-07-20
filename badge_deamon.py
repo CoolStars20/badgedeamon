@@ -59,7 +59,7 @@ def clean_tex(tex, maxlen=35):
     if len(tex) > maxlen:
         return None, 'For security reaons, each field of can only contain {} characters (inlc. LaTeX markup)- yours is longer: . And besides, there is not that much space on the badge anyway. Contact us by email is there really is no way to fit your text into those character limits.'.format(maxlen, tex)
 
-    return tex, ''
+    return tex.replace('=20', ''), ''
 
 
 def find_pronoun_name_inst(regid, mail):
@@ -198,10 +198,11 @@ def prepare_badge_email(c, regid, warntext=''):
         color = 'red'
     else:
         color = 'black'
+    print('Preparing email for: {}'.format(name))
     compile_pdf(regid, {'image1': image1, 'image2': image2, 'pronoun': pronoun,
                         'name': name, 'inst': affil,
                         'typetext': title, 'typecolor': color})
-    return compose_email(emailaddr, regid, pronoun, name, affil)
+    return compose_email(emailaddr, regid, pronoun, name, affil, warntext)
 
 
 def email_for_regids(c, regids):
