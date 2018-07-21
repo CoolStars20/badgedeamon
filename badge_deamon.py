@@ -59,7 +59,7 @@ def clean_tex(tex, maxlen=35):
     if len(tex) > maxlen:
         return None, 'For security reaons, each field of can only contain {} characters (inlc. LaTeX markup)- yours is longer: . And besides, there is not that much space on the badge anyway. Contact us by email is there really is no way to fit your text into those character limits.'.format(maxlen, tex)
 
-    return tex.replace('=20', ''), ''
+    return tex.replace('=20', '').replace('=0A', ''), ''
 
 
 def find_pronoun_name_inst(regid, mail):
