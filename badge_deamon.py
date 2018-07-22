@@ -42,7 +42,7 @@ def test_regid_known(c, regid):
     return c.fetchone()[0] == 1
 
 
-def clean_tex(tex, maxlen=35):
+def clean_tex(tex, maxlen=45):
     '''LaTeX can be used to execute arbitrary commands.
     While a full sanatizing might be impossible, we use an approach here that
     blacklists the most dangerous commands AND puts a very restrictive length requirement
