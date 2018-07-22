@@ -57,7 +57,7 @@ def clean_tex(tex, maxlen=45):
             return None, 'For security reasons LaTeX command {} is disabled in this script. Contact us by email if you really need it for your badge.'.format(b)
 
     if len(tex) > maxlen:
-        return None, 'For security reaons, each field of can only contain {} characters (inlc. LaTeX markup)- yours is longer: . And besides, there is not that much space on the badge anyway. Contact us by email is there really is no way to fit your text into those character limits.'.format(maxlen, tex)
+        return None, 'For security reaons, each field of can only contain {} characters (incl. LaTeX markup)- yours is longer: {}. And besides, there is not that much space on the badge anyway. Contact us by email is there really is no way to fit your text into those character limits.'.format(maxlen, tex)
 
     return tex.replace('=20', '').replace('=0A', ''), ''
 
