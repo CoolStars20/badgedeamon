@@ -18,7 +18,7 @@ You can also correct your name (e.g. missing special characters), affiliation
 people to use [1].
 
 To change anything on your badge, just reply to this email without changing the
-subject line **on or before July 26th**. Your email will be parsed by a
+subject line **on or before Thursday, July 26th**. Your email will be parsed by a
 program. If you need to contact a human about your badge, write to
 hgunther@mit.edu.
 
@@ -38,7 +38,9 @@ TO CHANGE THE IMAGE, simply attach one or two jpeg, png, or pdf files to your re
 
 Our friendly bot will reply to you with a new badge and you can iterate until
 you are happy; if you don't receive a new badge image, your email was not
-processed correctly. Please contact hgunther@mit.edu for assistance.
+processed correctly. This program was written by me and I'm an astronomer not a
+professional software developer. I'm sure there are bugs. So if it does not work,
+contact me at hgunther@mit.edu and I will fix your badge manually.
 
 (If you are interested, the script for this bot is on github at
 https://github.com/CoolStars20/badgedeamon .)
