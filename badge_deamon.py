@@ -70,7 +70,7 @@ def find_pronoun_name_inst(regid, mail):
     for part in mail.walk():
         if part.get_content_maintype() == 'text':
             if part.get_content_subtype() == 'plain':
-                textplain = part.get_payload().splitlines()
+                textplain = part.get_payload(decode=True).splitlines()
             if part.get_content_subtype() == 'html':
                 texthtml = part.get_payload()
                 # Remove obvious html tags. This method can be fooled and html
@@ -92,6 +92,11 @@ def find_pronoun_name_inst(regid, mail):
         # Later lines are most likely just the old message attached at bottom
         text.reverse()
         for l in text:
+            # I think the type of l is always bytes due to the decode=True above
+            # but since this program is live already, I'll rather add another test
+            # to be sure
+            if type(l) is bytes:
+                l = l.decode("utf-8")
             p = reg_newpronoun.search(l)
             m = reg_newname.search(l)
             a = reg_newaffiliation.search(l)
