@@ -70,18 +70,25 @@ def find_pronoun_name_inst(regid, mail):
     for part in mail.walk():
         if part.get_content_maintype() == 'text':
             if part.get_content_subtype() == 'plain':
-                textplain = part.get_payload(decode=True).splitlines()
+                textplain = part
+                # Hack. Should probably have better code that deals with email
+                # that have several text/plain parts.
+                # Usually, the important one if the first one, but I probably
+                # should parse all of them.
+                break
             if part.get_content_subtype() == 'html':
-                texthtml = part.get_payload()
+                texthtml = part
                 # Remove obvious html tags. This method can be fooled and html
                 # tags and remain, but that's not a security risk for
                 # this application
-                re.sub('<[^<]+?>', '', texthtml)
-                texthtml = texthtml.splitlines()
+                # re.sub('<[^<]+?>', '', texthtml)
+                # texthtml = texthtml.splitlines()
     if (textplain is None) and (texthtml is None):
         return None, None
     else:
         text = texthtml if (textplain is None) else textplain
+        charset = text.get_content_charset()
+        text = text.get_payload(decode=True).splitlines()
         wtext1 = ''
         wtext2 = ''
         wtext0 = ''
@@ -96,7 +103,7 @@ def find_pronoun_name_inst(regid, mail):
             # but since this program is live already, I'll rather add another test
             # to be sure
             if type(l) is bytes:
-                l = l.decode("utf-8")
+                l = l.decode(charset)
             p = reg_newpronoun.search(l)
             m = reg_newname.search(l)
             a = reg_newaffiliation.search(l)
