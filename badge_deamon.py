@@ -208,6 +208,8 @@ def prepare_badge_email(c, regid, warntext=''):
         color = 'blue'
     elif title == "Press":
         color = 'red'
+    elif title == "Industry Panel":
+        color = 'BurntOrange'
     else:
         color = 'black'
     print('Preparing email for: {}'.format(name))
