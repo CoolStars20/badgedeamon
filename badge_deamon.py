@@ -203,7 +203,7 @@ def prepare_badge_email(c, regid, warntext=''):
     if affil == '':
         affil = 'affiliation here'
     if title == 'LOC':
-        color = 'green'
+        color = 'ForestGreen'
     elif title == 'SOC':
         color = 'blue'
     elif title == "Press":

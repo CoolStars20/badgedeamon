@@ -68,5 +68,17 @@
 \hspace{4mm}
 {{badge('image2', 'Back side of badge', dat)}}
 
+\vspace{4mm}
+
+{{dat['name']}} - {{dat['regid']}}\\
+{% if dat['booklet'] %}Abstract book\\{% endif %}
+{% if not dat['budorm'] %}BU mealcard\\{% endif %}
+{% if dat['extrarec'] %}Extra reception ticket\\ {% endif %}
+{% if dat['excursions'] %}{{dat['excursions']}}\\{% endif %}
+{% if dat['banquet'] %}Banquet: {{dat['banquet']}}\\{% endif %}
+{% if dat['extrabanquet'] %}Extra Banquet Ticket: {{dat['extrabanquet']}}}\\{% endif %}
+{% if dat['comment'] %}{{dat['comment']}}\\{% endif %}
+Diet restrictions: {{dat['diet']}}
+
 \end{document}
 
