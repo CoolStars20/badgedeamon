@@ -198,8 +198,7 @@ def prepare_badge_email(c, regid, warntext=''):
     if not test_regid_known(c, regid):
         raise ValueError('regid {} unknown'.format(regid))
 
-    c.execute('SELECT pronoun, name, affil, image1, image2, email, title, booklet, extrarec, banquet, extrabanquet, excursion, diet, comment, budorm FROM badges
-     WHERE regid=?', [str(regid)])
+    c.execute('SELECT pronoun, name, affil, image1, image2, email, title, booklet, extrarec, banquet, extrabanquet, excursion, diet, comment, budorm FROM badges WHERE regid=?', [str(regid)])
     fetch = c.fetchone()
     data = {}
     for i, j in zip(['pronoun', 'name', 'inst', 'image1', 'image2', 'email', 'typetext', 'booklet', 'extrarec', 'banquet', 'extrabanquet', 'excursion', 'diet', 'comment', 'budorm'], fetch):
