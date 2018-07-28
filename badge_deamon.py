@@ -218,7 +218,7 @@ def prepare_badge_email(c, regid, warntext=''):
     data['typecolor'] = color
     data['regid'] = regid
 
-    print('Preparing email for: {}'.format(name))
+    print('Preparing email for: {}'.format(data['name']))
     compile_pdf(regid, data)
     return compose_email(data['email'], regid, data['pronoun'], data['name'], data['inst'], warntext)
 
