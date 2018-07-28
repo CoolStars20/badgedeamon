@@ -202,8 +202,7 @@ def prepare_badge_email(c, regid, warntext=''):
      WHERE regid=?', [str(regid)])
     fetch = c.fetchone()
     data = {}
-    for i, j in zip(['pronoun', 'name', 'inst', 'image1', 'image2', 'email', 'typetext', 'booklet', 'extrarec', 'banquet', 'extrabanquet', 'excursion', 'diet', '
-     comment', 'budorm'], fetch):
+    for i, j in zip(['pronoun', 'name', 'inst', 'image1', 'image2', 'email', 'typetext', 'booklet', 'extrarec', 'banquet', 'extrabanquet', 'excursion', 'diet', 'comment', 'budorm'], fetch):
         data[i] = j
 
     title = data['typetext']
