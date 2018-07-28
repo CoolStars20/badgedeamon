@@ -198,10 +198,15 @@ def prepare_badge_email(c, regid, warntext=''):
     if not test_regid_known(c, regid):
         raise ValueError('regid {} unknown'.format(regid))
 
-    c.execute('SELECT * FROM badges WHERE regid=?', [str(regid)])
-    regid, pronoun, name, affil, image1, image2, emailaddr, title = c.fetchone()
-    if affil == '':
-        affil = 'affiliation here'
+    c.execute('SELECT pronoun, name, affil, image1, image2, email, title, booklet, extrarec, banquet, extrabanquet, excursion, diet, comment, budorm FROM badges
+     WHERE regid=?', [str(regid)])
+    fetch = c.fetchone()
+    data = {}
+    for i, j in zip(['pronoun', 'name', 'inst', 'image1', 'image2', 'email', 'typetext', 'booklet', 'extrarec', 'banquet', 'extrabanquet', 'excursion', 'diet', '
+     comment', 'budorm'], fetch):
+        data[i] = j
+
+    title = data['typetext']
     if title == 'LOC':
         color = 'ForestGreen'
     elif title == 'SOC':
@@ -212,11 +217,12 @@ def prepare_badge_email(c, regid, warntext=''):
         color = 'BurntOrange'
     else:
         color = 'black'
+    data['typecolor'] = color
+    data['regid'] = regid
+
     print('Preparing email for: {}'.format(name))
-    compile_pdf(regid, {'image1': image1, 'image2': image2, 'pronoun': pronoun,
-                        'name': name, 'inst': affil,
-                        'typetext': title, 'typecolor': color})
-    return compose_email(emailaddr, regid, pronoun, name, affil, warntext)
+    compile_pdf(regid, data)
+    return compose_email(data['email'], regid, data['pronoun'], data['name'], data['inst'], warntext)
 
 
 def email_for_regids(c, regids):
