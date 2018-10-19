@@ -27,6 +27,10 @@ password = password[:-1]
 # set up jinja
 env = Environment(loader=FileSystemLoader([selfpath]))
 
+# Make colors variables
+# make email server variable
+# collect and comment variables on the top
+# add docs for functions
 
 def send_emails(msg):
     with smtplib.SMTP('smtp.gmail.com', 587) as s:
@@ -194,7 +198,7 @@ def compose_email(emailaddr, regid, pronoun, name, affil, warntext=''):
     return msg
 
 
-def prepare_badge_email(c, regid, warntext=''):
+def prepare_badge_pdf(c, regid):
     if not test_regid_known(c, regid):
         raise ValueError('regid {} unknown'.format(regid))
 
@@ -218,8 +222,12 @@ def prepare_badge_email(c, regid, warntext=''):
     data['typecolor'] = color
     data['regid'] = regid
 
-    print('Preparing email for: {}'.format(data['name']))
     compile_pdf(regid, data)
+
+
+def prepare_badge_email(c, regid, warntext=''):
+    prepare_badge_pdf(c, regid)
+    print('Preparing email for: {}'.format(data['name']))
     return compose_email(data['email'], regid, data['pronoun'], data['name'], data['inst'], warntext)
 
 
