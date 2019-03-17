@@ -5,48 +5,43 @@ import shutil
 from tempfile import TemporaryDirectory
 from email.message import EmailMessage
 import re
-from jinja2 import Environment, FileSystemLoader
 import sqlite3
 import imaplib
 import email
+import configparser
+import argparse
 
-reg_subject = re.compile('\[#(?P<id>[0-9]+)\]')
-reg_newpronoun = re.compile('BADGE PRONOUN:(?P<pronoun>[\S\s]+)', re.IGNORECASE)
-reg_newname = re.compile('BADGE NAME:(?P<name>[\S\s]+)', re.IGNORECASE)
-reg_newaffiliation = re.compile('BADGE AFFILIATION:(?!Institute of Example)(?P<affil>[\S\s]+)', re.IGNORECASE)
-badge_images = '/melkor/d1/guenther/projects/cs20/badgeimages'
-ready_badges = '/melkor/d1/guenther/projects/cs20/badges/'
-textemplate = 'badge_template.tex'
-selfpath = os.path.dirname(__file__)
-
-# Load password
-with open(os.path.join(selfpath, '..', 'gmail.txt')) as f:
-    password = f.read()
-password = password[:-1]
-
-# set up jinja
-env = Environment(loader=FileSystemLoader([selfpath]))
-
-# Make colors variables
-# make email server variable
-# collect and comment variables on the top
-# add docs for functions
-
-def send_emails(msg):
-    with smtplib.SMTP('smtp.gmail.com', 587) as s:
-        s.ehlo()
-        s.starttls()
-        s.login(msg[0]['From'], password)
-        for m in msg:
-            s.send_message(m)
+from jinja2 import Environment, FileSystemLoader
 
 
-def test_regid_known(c, regid):
+def setup_config_env(configfile):
+    '''Read config file and setup jinja2 environment
+
+    Parameters
+    ----------
+    configfile : string
+        path and filename to the configuration file
+
+    Returns
+    -------
+    config : `configparser.ConfigParser`
+        Config parser object
+    env : `jinja2.Environment`
+        jinja2 Environment
+    '''
+    config = configparser.ConfigParser()
+    config.read(configfile)
+    # set up jinja
+    env = Environment(loader=FileSystemLoader([config['path']['templates']]))
+    return config, env
+
+
+def regid_known(c, regid):
     c.execute('SELECT COUNT(*) FROM badges WHERE regid = ?', [str(regid)])
     return c.fetchone()[0] == 1
 
 
-def clean_tex(tex, maxlen=45):
+def clean_tex(tex, config):
     '''LaTeX can be used to execute arbitrary commands.
     While a full sanatizing might be impossible, we use an approach here that
     blacklists the most dangerous commands AND puts a very restrictive length requirement
@@ -60,18 +55,21 @@ def clean_tex(tex, maxlen=45):
         if '\\' + b in tex:
             return None, 'For security reasons LaTeX command {} is disabled in this script. Contact us by email if you really need it for your badge.'.format(b)
 
+    maxlen = int(config['settings']['max_tex_len'])
     if len(tex) > maxlen:
-        return None, 'For security reaons, each field of can only contain {} characters (incl. LaTeX markup)- yours is longer: {}. And besides, there is not that much space on the badge anyway. Contact us by email is there really is no way to fit your text into those character limits.'.format(maxlen, tex)
+        return None, 'For security reaons, each field can only contain {} characters (incl. LaTeX markup)- yours is longer: {}. And besides, there is not that much space on the badge anyway. Contact us by email is there really is no way to fit your text into those character limits.'.format(maxlen, tex)
 
-    return tex.replace('=20', '').replace('=0A', ''), ''
+    return tex, ''
 
 
-def find_pronoun_name_inst(regid, mail):
+def reglist_emailparsing(config):
+    return [re.compile(s, re.IGNORECASE) for s in config['email parsing'].values()]
+
+
+def find_text_part(msg):
     textplain = None
     texthtml = None
-    name = None
-    affil = None
-    for part in mail.walk():
+    for part in msg.walk():
         if part.get_content_maintype() == 'text':
             if part.get_content_subtype() == 'plain':
                 textplain = part
@@ -83,55 +81,54 @@ def find_pronoun_name_inst(regid, mail):
             if part.get_content_subtype() == 'html':
                 texthtml = part
                 # Remove obvious html tags. This method can be fooled and html
-                # tags and remain, but that's not a security risk for
+                # tags can remain, but that's not a security risk for
                 # this application
                 # re.sub('<[^<]+?>', '', texthtml)
                 # texthtml = texthtml.splitlines()
     if (textplain is None) and (texthtml is None):
-        return None, None
+        return None
     else:
         text = texthtml if (textplain is None) else textplain
         charset = text.get_content_charset()
-        text = text.get_payload(decode=True).splitlines()
-        wtext1 = ''
-        wtext2 = ''
-        wtext0 = ''
-        pronoun = None
-        name = None
-        affil = None
-        # look for first occurrence in text.
-        # Later lines are most likely just the old message attached at bottom
-        text.reverse()
-        for l in text:
-            # I think the type of l is always bytes due to the decode=True above
-            # but since this program is live already, I'll rather add another test
-            # to be sure
-            if type(l) is bytes:
-                l = l.decode(charset)
-            p = reg_newpronoun.search(l)
-            m = reg_newname.search(l)
-            a = reg_newaffiliation.search(l)
-            if p is not None:
-                pronoun = p['pronoun']
-                pronoun, wtext0 = clean_tex(pronoun)
-            if m is not None:
-                name = m['name']
-                name, wtext1 = clean_tex(name)
-            if a is not None:
-                affil = a['affil']
-                affil, wtext2 = clean_tex(affil)
-        return pronoun, name, affil, wtext0 + wtext1 + wtext2
+        text = text.get_payload(decode=True)
+        return text.decode(charset).splitlines()
 
 
-def find_firstsecond_suitable_image(regid, mail):
+def parse_text(text, config):
+    regs = reglist_emailparsing(config)
+
+    warntext = []
+    parsedvalues = {}
+    # look for first occurrence in text.
+    # Later lines are most likely just the old message attached at bottom
+    text.reverse()
+    for l in text:
+        for r in regs:
+            match = r.search(l)
+            if match:
+                parsedvalues.update(match.groupdict())
+    cleanvalues = {}
+    for k, v in parsedvalues.items():
+        # The following line is for the obscure case that a regex
+        # has optional named groups and only some of them are
+        # matched. In this case, the remaining ones have value
+        # "None" which might cause problems further down.
+        if v is not None:
+            newval, newwarn = clean_tex(v, config)
+            if newval is not None:  # valid
+                cleanvalues[k] = newval
+            else:  # invalid tex value
+                warntext.append(newwarn)
+    return cleanvalues, '\n'.join(warntext)
+
+
+def find_firstsecond_suitable_image(regid, mail, config):
     image = [None, None]
     warntext = ''
     for part in mail.walk():
         if part.get_content_maintype() == 'multipart':
-            # print part.as_string()
             continue
         if part.get('Content-Disposition') is None:
-            # print part.as_string()
             continue
         fileName = part.get_filename()
         if bool(fileName):
@@ -141,33 +138,34 @@ def find_firstsecond_suitable_image(regid, mail):
             else:
                 if image[0] is None:
                     fullfilename = regid + '_front.' + extension
-                    filePath = os.path.join(badge_images, fullfilename)
+                    filePath = os.path.join(config['path']['image_dir'], fullfilename)
                     with open(filePath, 'wb') as fp:
                         fp.write(part.get_payload(decode=True))
                     image[0] = fullfilename
                 elif image[1] is None:
                     fullfilename = regid + '_back.' + extension
-                    filePath = os.path.join(badge_images, fullfilename)
+                    filePath = os.path.join(config['path']['image_dir'], fullfilename)
                     with open(filePath, 'wb') as fp:
                         fp.write(part.get_payload(decode=True))
                     image[1] = fullfilename
 
                 else:
-                    warntext = "More than two images file were attached to your message. I'm using the first and second of those for your badge.\n"
+                    warntext = "More than two image files were attached to your message. I'm using the first and second of those for your badge.\n"
     if image[0] is None:
-        warntext = "No file ending on 'jpg', 'jpeg' or 'png' was attached to your email. I'm using whatever file you previously submitted or (if you did not submit a file with a previous email) a default image.\n"
+        warntext = "No file ending on 'jpg', 'jpeg', 'pdf', or 'png' was attached to your email. I'm using whatever file you previously submitted or (if you did not submit a file with a previous email) a default image.\n"
     return image, warntext
 
 
-def compile_pdf(regid, dat):
-    template = env.get_template('badge_template.tex')
+def compile_pdf(dat, config, env):
+    template = env.get_template(config['templates']['tex'])
+    regid = dat['regid']
     with TemporaryDirectory() as tempdir:
         with open(os.path.join(tempdir, 'badge_{}.tex'.format(regid)), "w") as tex_out:
-            tex_out.write(template.render(dat=dat))
-        shutil.copy(os.path.join(selfpath, 'csheader.jpg'), tempdir)
-        shutil.copy(os.path.join(selfpath, 'csheader_narrow.jpg'), tempdir)
-        shutil.copy(os.path.join(badge_images, dat['image1']), tempdir)
-        shutil.copy(os.path.join(badge_images, dat['image2']), tempdir)
+            tex_out.write(template.render(data=dat))
+        for fname in config['templates']['extra_files'].split():
+            shutil.copy(os.path.join(config['path']['templates'], fname), tempdir)
+        shutil.copy(os.path.join(config['path']['image_dir'], dat['image1']), tempdir)
+        shutil.copy(os.path.join(config['path']['image_dir'], dat['image2']), tempdir)
         latex = subprocess.Popen(['pdflatex', '-interaction=nonstopmode',
                                   '-no-shell-escape',
                                   'badge_{}.tex'.format(regid)],
@@ -175,22 +173,22 @@ def compile_pdf(regid, dat):
                                  stdout=subprocess.PIPE)
         out, err = latex.communicate()
         shutil.copy(os.path.join(tempdir, 'badge_{}.pdf'.format(regid)),
-                    ready_badges)
+                    config['path']['badge_dir'])
         shutil.copy(os.path.join(tempdir, 'badge_{}.tex'.format(regid)),
-                    ready_badges)
+                    config['path']['badge_dir'])
 
 
-def compose_email(emailaddr, regid, pronoun, name, affil, warntext=''):
-    template = env.get_template('email_template.txt')
+def compose_email(data, config, env, warntext=''):
+    template = env.get_template(config['templates']['email'])
     # Create the container email message.
     msg = EmailMessage()
-    msg['From'] = 'coolstarsbot@gmail.com'
-    msg['To'] = emailaddr
-    msg['Subject'] = 'CS20 badge for [#{}]'.format(regid)
-    msg.set_content(template.render(pronoun=pronoun, name=name, affil=affil, warntext=warntext))
-    msg.preamble = 'HTML and PDF files are attached, but it seems your email reader is not MIME aware.\n'
+    msg['From'] = config['email']['address']
+    msg['To'] = data['email']
+    msg['Subject'] = config['email subject']['subject'].format(data['regid'])
+    msg.set_content(template.render(data, warntext=warntext))
+    msg.preamble = 'PDF file is attached, but it seems your email reader is not MIME aware.\n'
 
-    with open(os.path.join(ready_badges, 'badge_{}.pdf'.format(regid)), 'rb') as fp:
+    with open(os.path.join(config['path']['badge_dir'], 'badge_{}.pdf'.format(data['regid'])), 'rb') as fp:
             pdf_data = fp.read()
     msg.add_attachment(pdf_data,
                        filename='badge.pdf',
@@ -198,47 +196,39 @@ def compose_email(emailaddr, regid, pronoun, name, affil, warntext=''):
     return msg
 
 
-def prepare_badge_pdf(c, regid):
-    if not test_regid_known(c, regid):
+def prepare_badge_email(c, regid, config, env, warntext=''):
+    if not regid_known(c, regid):
         raise ValueError('regid {} unknown'.format(regid))
-
-    c.execute('SELECT pronoun, name, affil, image1, image2, email, title, booklet, extrarec, banquet, extrabanquet, excursion, diet, comment, budorm FROM badges WHERE regid=?', [str(regid)])
-    fetch = c.fetchone()
-    data = {}
-    for i, j in zip(['pronoun', 'name', 'inst', 'image1', 'image2', 'email', 'typetext', 'booklet', 'extrarec', 'banquet', 'extrabanquet', 'excursion', 'diet', 'comment', 'budorm'], fetch):
-        data[i] = j
-
-    title = data['typetext']
-    if title == 'LOC':
-        color = 'ForestGreen'
-    elif title == 'SOC':
-        color = 'blue'
-    elif title == "Press":
-        color = 'red'
-    elif title == "Industry Panel":
-        color = 'BurntOrange'
-    else:
-        color = 'black'
-    data['typecolor'] = color
+    c.execute('SELECT * FROM badges WHERE regid=?', [str(regid)])
+    row = c.fetchone()
+    data = {c.description[i][0]: row[i] for i in range(len(row))}
+    if 'role' in data.keys():
+        data['rolecolor'] = config.get('color', role, default='black')
     data['regid'] = regid
 
-    compile_pdf(regid, data)
+    compile_pdf(data, config, env)
+    msg = compose_email(data, config, env, warntext)
+    return msg
 
 
-def prepare_badge_email(c, regid, warntext=''):
-    prepare_badge_pdf(c, regid)
-    print('Preparing email for: {}'.format(data['name']))
-    return compose_email(data['email'], regid, data['pronoun'], data['name'], data['inst'], warntext)
+def send_emails(msg, config):
+    with smtplib.SMTP(config['email']['smtp_server'],
+                      config.getint('email', 'smtp_port')) as s:
+        s.ehlo()
+        s.starttls()
+        s.login(config['email']['address'], config['email']['password'])
+        for m in msg:
+            s.send_message(m)
 
 
-def email_for_regids(c, regids):
-    send_emails([prepare_badge_email(c, r) for r in regids])
+def email_for_regids(c, regids, config, env):
+    send_emails([prepare_badge_email(c, r, config, env) for r in regids])
 
 
-def retrieve_new_messages():
+def retrieve_new_messages(config):
     messagelist = []
-    with imaplib.IMAP4_SSL('imap.gmail.com') as imapSession:
-        typ, accountDetails = imapSession.login('coolstarsbot@gmail.com', password)
+    with imaplib.IMAP4_SSL(config['email']['imap_server']) as imapSession:
+        typ, accountDetails = imapSession.login(config['email']['address'], password)
         if typ != 'OK':
             raise Exception('Not able to sign in!')
         imapSession.select('Inbox')
@@ -252,46 +242,92 @@ def retrieve_new_messages():
             messagelist.append(messageParts)
     return messagelist
 
+def forward_email(mail, config):
+    mail.replace_header('From', config['email']['address'])
+    mail.replace_header('To', config['email']['alert'])
+    send_emails([mail], config)
 
-def process_new_messages(conn, c, messages):
+
+def parse_message(conn, c, regid, mail, config):
+    '''Parse a single message for text and attachements  and update sql database'''
+    image, warntext = find_firstsecond_suitable_image(regid, mail, config)
+    text = find_text_part(mail)
+    parsedvalues, warntext2 = parse_text(text, config)
+    if image[0] is not None:
+        # If only one image is submitted, use that for both sides
+        if image[1] is None:
+            image[1] = image[0]
+        c.execute('UPDATE badges SET image1=? WHERE regid=?', (image[0], regid))
+        c.execute('UPDATE badges SET image2=? WHERE regid=?', (image[1], regid))
+        for k, v in parsedvalues.items():
+            # Note that format(k) is not a security issue because the keys are
+            # defined by the person setting up script in the configuration
+            # and not be the sender of the email
+            c.execute('UPDATE badges SET {}=? WHERE regid=?'.format(k), (v, regid))
+        conn.commit()
+        return warntext + ' ' + warntext2
+
+
+def process_new_messages(conn, c, messages, config, env):
+    reg_subject = re.compile(config['email subject']['reg_subject'], re.IGNORECASE)
+
     for messageParts in messages:
         emailBody = messageParts[0][1]
         mail = email.message_from_bytes(emailBody)
         match = reg_subject.search(mail['SUBJECT'])
-        if match is None:
-            # Header does not have message ID in it -> forward to Moritz
-            mail.replace_header('From', 'coolstarsbot@gmail.com')
-            mail.replace_header('To', 'hgunther@mit.edu')
-            send_emails([mail])
+        if (match is None) or not regid_known(c, match['id']):
+            # Header does not have message ID in it
+            forward_email(mail)
         else:
-            regid = match['id']
-            if not test_regid_known(c, regid):
-                mail.replace_header('From', 'coolstarsbot@gmail.com')
-                mail.replace_header('To', 'hgunther@mit.edu')
-                send_emails([mail])
-            else:
-                image, warntext = find_firstsecond_suitable_image(regid, mail)
-                pronoun, name, inst, warntext2 = find_pronoun_name_inst(regid, mail)
-                if image[0] is not None:
-                    # If only one image is submitted, use that for both sides
-                    if image[1] is None:
-                        image[1] = image[0]
-                    c.execute('UPDATE badges SET image1=? WHERE regid=?', (image[0], regid))
-                    c.execute('UPDATE badges SET image2=? WHERE regid=?', (image[1], regid))
-                if pronoun is not None:
-                    c.execute('UPDATE badges SET pronoun=? WHERE regid=?', (pronoun, regid))
-                if name is not None:
-                    c.execute('UPDATE badges SET name=? WHERE regid=?', (name, regid))
-                if inst is not None:
-                    c.execute('UPDATE badges SET affil=? WHERE regid=?', (inst, regid))
-                conn.commit()
-                msg = prepare_badge_email(c, regid, warntext + ' ' + warntext2)
-                send_emails([msg])
+            warntext = parse_message(conn, c, match['id'], mail, config)
+            msg = prepare_badge_email(c, match['id'], config, env, warntext)
+            send_emails([msg], config)
+
+class DeamonTableException(Exception):
+    '''Exception class for all table errors that are explicitly tested in this code.'''
+    pass
+
+
+def check_input_table(c, config):
+    '''Check that table "badges" exists and has the required columns.
+
+    This script has a few requirements on the name of the table that holds the
+    information about the badges and its columns. Some of this stuff can be
+    customized in the configuation file, but not all of it.
+
+    This message simply performs some simple, non-exhaustive checks on the
+    table and prints meaningful error messages.
+    '''
+    c.execute("select count(*) from sqlite_master where type='table' and name='badges'")
+    if not c.fetchone()[0] == 1:
+        raise DeamonTableException('Table "badges" does not exist in the database file.')
+    c.execute('SELECT * FROM badges')
+    colnames = [description[0] for description in c.description]
+    col_names_requd = ['regid', 'image1', 'image2', 'email']
+    if not set(col_names_requd) <= set(colnames):
+        raise DeamonTableException('Columns {} are required in table "badges" but {} found.'.format(col_names_requd, colnames))
+
+    regs = reglist_emailparsing(config)
+    for r in regs:
+        colset = set(r.groupindex.keys())
+        if not colset <= set(colnames):
+            raise DeamonTableException('The regular expression {} defines the groups {}, but not all of them correspond to columns in table "badges".'.format(r.pattern, colset))
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Download new emails, process them, update badge database and send out updated badges.')
+    parser.add_argument('config', type=argparse.FileType('r'),
+                        help='configuration file')
+
+    args = parser.parse_args()
+    config, env = setup_config_env(args['config'])
+
     # set up sqlite
     messages = retrieve_new_messages()
-    with sqlite3.connect(os.path.join(selfpath, 'badges.db')) as conn:
+    dbpath = config['path']['sql_database']
+    if not os.path.exists(dbpath):
+        raise DeamonTableException('Database file {} does not exist.'.format(dbpath))
+    with sqlite3.connect(dbpath) as conn:
         c = conn.cursor()
-        process_new_messages(conn, c, messages)
+        check_input_table(c, config)
+        process_new_messages(conn, c, messages, config, env)

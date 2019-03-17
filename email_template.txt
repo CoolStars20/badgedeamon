@@ -1,11 +1,5 @@
 Dear {{name}},
 
-IT'S TOO LATE - WE'VE PRINTED THE BADGES ALREADY. ANYWAY, WE WILL CONTINUE
-TO ANSWER YOUR EMAIL. We MAY (OR MAY NOT) BE ABLE TO REPRINT A FEW ON SUNDAY.
-SO, CONTINUE IF YOU WANT, BUT PLEASE DON'T BE OFFENDED IF YOUR CHANGES DON'T
-SHOW UP ON THE BADGE THAT WE GIVE YOU AT REGISTRATION (OR PRINT IT YOURSELF
-AND BRING YOUR OWN BADGE WITH YOU - WE'LL USE YOUR PRITNOUT AT REGISTRATION).
-
 {% if warntext %}
 Processing your previous email returned:
 {{warntext}}
@@ -26,7 +20,7 @@ people to use [1].
 To change anything on your badge, just reply to this email without changing the
 subject line **on or before Thursday, July 26th**. Your email will be parsed by a
 program. If you need to contact a human about your badge, write to
-hgunther@mit.edu.
+XXX@example.com.
 
 TO CHANGE THE IMAGE, simply attach one or two jpeg, png, or pdf files to your
 reply.

@@ -1,3 +1,12 @@
+% This is the template for a tex file.
+% Template fields are to be filled in by jinja2.
+
+
+% Macro BADGE
+% This macro sets one side of one badge.
+% It gets called twice below (once for the front side and once of the back side).
+% Modify text or dimensions here to make you badge fit your format.
+
 {% macro badge(image, title, dat) -%}
 \noindent
 \begin{minipage}[h][6.2in][c]{4.2in}
@@ -13,7 +22,7 @@
           keepaspectratio]{csheader}\\
 \end{centering}
 \end{minipage}
-{% if dat['typetext'] %}
+{% if dat['role'] %}
 \begin{minipage}[t][4.6in][c]{4.2in}
 {% else %}
 \begin{minipage}[t][5.2in][c]{4.2in}
@@ -41,9 +50,9 @@
     \end{minipage}
     {% if dat['typetext'] %}
      \begin{minipage}[t][0.6in][c]{4.2in}
-       \begin{tcolorbox}[width=0.98\textwidth,colback={{'{'}}{{dat['typecolor']}}{{'}'}},colupper=white]
+       \begin{tcolorbox}[width=0.98\textwidth,colback={{'{'}}{{dat['rolecolor']}}{{'}'}},colupper=white]
            \centering
-           {\bf \huge {{dat['typetext']}} }
+           {\bf \huge {{dat['role']}} }
          \end{tcolorbox}
        \end{minipage}
         {% endif %}
@@ -51,6 +60,8 @@
 }\end{minipage}%
 {%- endmacro %}
 
+
+%%% MAIN PART %%%
 
 \documentclass[landscape]{article}
 \usepackage[inner=1cm,outer=1cm,bottom=1cm,top=1.5cm,headsep=0cm,landscape]{geometry}
@@ -63,22 +74,33 @@
 
 \renewcommand{\familydefault}{\sfdefault}
 
+
 \begin{document}
+
+% The BADGE macro is called twice, once for the front side and once for the back side.
+% The macro uses minipages, so the two sides will fit next to each other on
+% one sheet of paper.
+
 {{badge('image1', 'Front side of badge', dat)}}
 \hspace{4mm}
 {{badge('image2', 'Back side of badge', dat)}}
 
 \vspace{4mm}
 
+% This stuff gets printed below the badge.
+% You'll cut it off or fold it in later.
+% This is a good place to print WIFI passwords, stuff that should be checked at registration
+% (e.g. dietary restrictions etc.
+% At Cool Stars, we put on additional infor for the registration staff, e.g.
+% - Did this person order a printed abstrct booklet?
+% - Did this person order a guest ticket for the banquet?
+%
+% Any field in your sql databse can be used here:
 {{dat['name']}} - {{dat['regid']}}\\
-{% if dat['booklet'] %}Abstract book\\{% endif %}
-{% if not dat['budorm'] %}BU mealcard\\{% endif %}
-{% if dat['extrarec'] %}Extra reception ticket\\ {% endif %}
-{% if dat['excursions'] %}{{dat['excursions']}}\\{% endif %}
-{% if dat['banquet'] %}Banquet: {{dat['banquet']}}\\{% endif %}
-{% if dat['extrabanquet'] %}Extra Banquet Ticket: {{dat['extrabanquet']}}}\\{% endif %}
-{% if dat['comment'] %}{{dat['comment']}}\\{% endif %}
-Diet restrictions: {{dat['diet']}}
+
+% wrapped in jinja2 if/endif to make it work if the database does not have a
+% field ``booklet''
+{% if dat['booklet'] %}Abstract book ordered\\{% endif %}
 
 \end{document}
 

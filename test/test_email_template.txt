@@ -1,0 +1,9 @@
+Dear {{name}},
+
+{% if warntext %}
+Processing your previous email returned:
+{{warntext}}
+
+{% endif %}
+
+BADGE NAME: {{name}}
