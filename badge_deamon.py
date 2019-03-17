@@ -10,6 +10,7 @@ import imaplib
 import email
 import configparser
 import argparse
+from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -203,7 +204,9 @@ def prepare_badge_email(c, regid, config, env, warntext=''):
     row = c.fetchone()
     data = {c.description[i][0]: row[i] for i in range(len(row))}
     if 'role' in data.keys():
-        data['rolecolor'] = config.get('color', role, default='black')
+        # defauls to black is role is not in config
+        warn('role: {} not in config - using black as color'.format(data['role']))
+        data['rolecolor'] = config['color'].get(data['role'], 'black')
     data['regid'] = regid
 
     compile_pdf(data, config, env)
@@ -228,7 +231,8 @@ def email_for_regids(c, regids, config, env):
 def retrieve_new_messages(config):
     messagelist = []
     with imaplib.IMAP4_SSL(config['email']['imap_server']) as imapSession:
-        typ, accountDetails = imapSession.login(config['email']['address'], password)
+        typ, accountDetails = imapSession.login(config['email']['address'],
+                                                config['email']['password'])
         if typ != 'OK':
             raise Exception('Not able to sign in!')
         imapSession.select('Inbox')
@@ -275,12 +279,13 @@ def process_new_messages(conn, c, messages, config, env):
         emailBody = messageParts[0][1]
         mail = email.message_from_bytes(emailBody)
         match = reg_subject.search(mail['SUBJECT'])
-        if (match is None) or not regid_known(c, match['id']):
+        if (match is None) or not regid_known(c, match.groups('id')[0]):
             # Header does not have message ID in it
-            forward_email(mail)
+            forward_email(mail, config)
         else:
-            warntext = parse_message(conn, c, match['id'], mail, config)
-            msg = prepare_badge_email(c, match['id'], config, env, warntext)
+            regid = match.groups('id')[0]
+            warntext = parse_message(conn, c, regid, mail, config)
+            msg = prepare_badge_email(c, regid, config, env, warntext)
             send_emails([msg], config)
 
 class DeamonTableException(Exception):
@@ -320,10 +325,10 @@ if __name__ == '__main__':
                         help='configuration file')
 
     args = parser.parse_args()
-    config, env = setup_config_env(args['config'])
+    config, env = setup_config_env(args.config.name)
 
     # set up sqlite
-    messages = retrieve_new_messages()
+    messages = retrieve_new_messages(config)
     dbpath = config['path']['sql_database']
     if not os.path.exists(dbpath):
         raise DeamonTableException('Database file {} does not exist.'.format(dbpath))

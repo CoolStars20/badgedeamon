@@ -126,8 +126,8 @@ def test_check_table_all_OK():
 def test_generate_and_parse_email():
     with sqlite3.connect(':memory:') as conn:
         c = conn.cursor()
-        c.execute('''CREATE TABLE badges (regid real, email text, image1 text, image2 text, name text, notused real)''')
-        c.execute("INSERT INTO badges VALUES (123, 'test@example.com', 'img1.png', 'img2.png', 'Hans Musterman', 45.678)")
+        c.execute('''CREATE TABLE badges (regid real, email text, image1 text, image2 text, name text, notused real, role text)''')
+        c.execute("INSERT INTO badges VALUES (123, 'test@example.com', 'kitty.jpeg', 'kitty.jpeg', 'Hans Musterman', 45.678, 'LOC')")
         conn.commit()
 
         config, env = setup_config_env('test/test_config.cfg')

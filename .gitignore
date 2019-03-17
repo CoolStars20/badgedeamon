@@ -1,0 +1,4 @@
+*~
+__pycache__
+# Make sure I don't accidentially commit files that contain secrets for full testing
+test/*secret*

@@ -1,13 +1,18 @@
-% This is the template for a tex file.
-% Template fields are to be filled in by jinja2.
+% Example Jinja 2 template for a confernece badge
 
+% ``data'' is a row fomr your sql table with all the fields, e.g.
+% data['name'] matching the column names in the SQL table.
 
 % Macro BADGE
 % This macro sets one side of one badge.
 % It gets called twice below (once for the front side and once of the back side).
 % Modify text or dimensions here to make you badge fit your format.
 
-{% macro badge(image, title, dat) -%}
+% Note how the dimensions are slightly different for badges that have
+% a role (a colored based saying e.g. ``LOC'' at the bottom and those
+% that do not.
+
+{% macro badge(image, title, data) -%}
 \noindent
 \begin{minipage}[h][6.2in][c]{4.2in}
 {{title}}\\
@@ -19,40 +24,40 @@
 \begin{minipage}[h][.78in][b]{4.2in}
 \begin{centering}
 \includegraphics[height=.78in, width=\textwidth,
-          keepaspectratio]{csheader}\\
+          keepaspectratio]{headerimage}\\
 \end{centering}
 \end{minipage}
-{% if dat['role'] %}
+{% if data['role'] %}
 \begin{minipage}[t][4.6in][c]{4.2in}
 {% else %}
 \begin{minipage}[t][5.2in][c]{4.2in}
 {% endif %}
 \begin{centering}
 \vspace{ \stretch{.3} }
-{% if dat['pronoun'] %}
-\large {{dat['pronoun']}}
+{% if data['pronoun'] %}
+\large {{data['pronoun']}}
 \vspace{ \stretch{.1} }
 {% endif %}
 \fontsize{1cm}{1.cm}\selectfont
-\textbf{ {{dat['name']}} }\\[2mm]
+\textbf{ {{data['name']}} }\\[2mm]
 \vspace{ \stretch{.1} }
-\Large \textbf{ {{dat['inst'] | default('affiliation unkown')}} }\\
+\Large \textbf{ {{data['affil'] | default('affiliation unkown')}} }\\
 \vfill
-{% if dat['typetext'] %}
+{% if data['role'] %}
 \includegraphics[height=3.2in, width=0.92\textwidth,
- keepaspectratio]{{'{'}}{{dat[image]}}{{'}'}}\\
+ keepaspectratio]{{'{'}}{{data[image]}}{{'}'}}\\
 {% else %}
          \includegraphics[height=3.8in, width=0.92\textwidth,
-          keepaspectratio]{{'{'}}{{dat[image]}}{{'}'}}\\
+          keepaspectratio]{{'{'}}{{data[image]}}{{'}'}}\\
  {% endif %}
         \vspace{ \stretch{.5} }
       \end{centering}
     \end{minipage}
-    {% if dat['typetext'] %}
+    {% if data['role'] %}
      \begin{minipage}[t][0.6in][c]{4.2in}
-       \begin{tcolorbox}[width=0.98\textwidth,colback={{'{'}}{{dat['rolecolor']}}{{'}'}},colupper=white]
+       \begin{tcolorbox}[width=0.98\textwidth,colback={{'{'}}{{data['rolecolor']}}{{'}'}},colupper=white]
            \centering
-           {\bf \huge {{dat['role']}} }
+           {\bf \huge {{data['role']}} }
          \end{tcolorbox}
        \end{minipage}
         {% endif %}
@@ -60,7 +65,7 @@
 }\end{minipage}%
 {%- endmacro %}
 
-
+ 
 %%% MAIN PART %%%
 
 \documentclass[landscape]{article}
@@ -74,18 +79,18 @@
 
 \renewcommand{\familydefault}{\sfdefault}
 
-
 \begin{document}
-
 % The BADGE macro is called twice, once for the front side and once for the back side.
 % The macro uses minipages, so the two sides will fit next to each other on
 % one sheet of paper.
 
-{{badge('image1', 'Front side of badge', dat)}}
+
+{{badge('image1', 'Front side of badge', data)}}
 \hspace{4mm}
-{{badge('image2', 'Back side of badge', dat)}}
+{{badge('image2', 'Back side of badge', data)}}
 
 \vspace{4mm}
+
 
 % This stuff gets printed below the badge.
 % You'll cut it off or fold it in later.
@@ -96,11 +101,10 @@
 % - Did this person order a guest ticket for the banquet?
 %
 % Any field in your sql databse can be used here:
-{{dat['name']}} - {{dat['regid']}}\\
+{{data['name']}} - {{data['regid']}}\\
 
 % wrapped in jinja2 if/endif to make it work if the database does not have a
 % field ``booklet''
-{% if dat['booklet'] %}Abstract book ordered\\{% endif %}
+{% if data['booklet'] %}Abstract book ordered\\{% endif %}
 
 \end{document}
-
