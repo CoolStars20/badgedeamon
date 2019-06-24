@@ -10,7 +10,6 @@ import imaplib
 import email
 import configparser
 import argparse
-from warnings import warn
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -185,6 +184,7 @@ def compose_email(data, config, env, warntext=''):
     msg = EmailMessage()
     msg['From'] = config['email']['address']
     msg['To'] = data['email']
+    print('Composing email to: {}'.format(data['email']))
     msg['Subject'] = config['email subject']['subject'].format(data['regid'])
     msg.set_content(template.render(data=data, warntext=warntext))
     msg.preamble = 'PDF file is attached, but it seems your email reader is not MIME aware.\n'
@@ -197,7 +197,7 @@ def compose_email(data, config, env, warntext=''):
     return msg
 
 
-def prepare_badge_email(c, regid, config, env, warntext=''):
+def data_for_regid(c, regid, config):
     if not regid_known(c, regid):
         raise ValueError('regid {} unknown'.format(regid))
     c.execute('SELECT * FROM badges WHERE regid=?', [str(regid)])
@@ -207,6 +207,16 @@ def prepare_badge_email(c, regid, config, env, warntext=''):
         # defauls to black is role is not in config
         data['rolecolor'] = config['color'].get(data['role'], 'black')
         data['rolecolortext'] = config['colortext'].get(data['role'], 'white')
+    return data
+
+
+def prepare_pdf(c, regid, config, env):
+    data = data_for_regid(c, regid, config)
+    compile_pdf(data, config, env)
+
+
+def prepare_badge_email(c, regid, config, env, warntext=''):
+    data = data_for_regid(c, regid, config)
     compile_pdf(data, config, env)
     msg = compose_email(data, config, env, warntext)
     return msg
@@ -223,7 +233,7 @@ def send_emails(msg, config):
 
 
 def email_for_regids(c, regids, config, env):
-    send_emails([prepare_badge_email(c, r, config, env) for r in regids])
+    send_emails([prepare_badge_email(c, r, config, env) for r in regids], config)
 
 
 def retrieve_new_messages(config):
@@ -242,6 +252,7 @@ def retrieve_new_messages(config):
             if typ != 'OK':
                 raise Exception('Error fetching mail.')
             messagelist.append(messageParts)
+        print('Retrieved {} messages.'.format(len(messagelist)))
     return messagelist
 
 
@@ -262,13 +273,13 @@ def parse_message(conn, c, regid, mail, config):
             image[1] = image[0]
         c.execute('UPDATE badges SET image1=? WHERE regid=?', (image[0], regid))
         c.execute('UPDATE badges SET image2=? WHERE regid=?', (image[1], regid))
-        for k, v in parsedvalues.items():
-            # Note that format(k) is not a security issue because the keys are
-            # defined by the person setting up script in the configuration
-            # and not be the sender of the email
-            c.execute('UPDATE badges SET {}=? WHERE regid=?'.format(k), (v, regid))
-        conn.commit()
-        return warntext + ' ' + warntext2
+    for k, v in parsedvalues.items():
+        # Note that format(k) is not a security issue because the keys are
+        # defined by the person setting up script in the configuration
+        # and not by the sender of the email
+        c.execute('UPDATE badges SET {}=? WHERE regid=?'.format(k), (v, regid))
+    conn.commit()
+    return warntext + ' ' + warntext2
 
 
 def process_new_messages(conn, c, messages, config, env):
@@ -327,11 +338,12 @@ if __name__ == '__main__':
     config, env = setup_config_env(args.config.name)
 
     # set up sqlite
-    messages = retrieve_new_messages(config)
     dbpath = config['path']['sql_database']
     if not os.path.exists(dbpath):
         raise DeamonTableException('Database file {} does not exist.'.format(dbpath))
+
     with sqlite3.connect(dbpath) as conn:
         c = conn.cursor()
         check_input_table(c, config)
+        messages = retrieve_new_messages(config)
         process_new_messages(conn, c, messages, config, env)

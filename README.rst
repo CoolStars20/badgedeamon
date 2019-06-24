@@ -142,7 +142,8 @@ Send emails to your conference attendees with a draft badge so that they can loo
   >>> import sqlite3
   >>> conn = sqlite3.connect('badges.db')
   >>> c = conn.cursor()
-  >>> badge_deamon.email_for_regids(c, [i for i in range(123)])
+  >>> config, env = badge_deamon.setup_config_env('example_config.cfg')
+  >>> badge_deamon.email_for_regids(c, [i for i in range(123)], config, env)
   >>> conn.commit()
   >>> conn.close()
 
@@ -160,15 +161,18 @@ It's a good idea to back up the directory with the images and `badges.pdb`, just
 
 Print final badges
 ------------------
-Print our badges a few days before the conference. Stop the cron job because it's confusing to have new images appear while you try to clean everything up.
+Print your badges a few days before the conference. Stop the cron job because it's confusing to have new images appear while you try to clean everything up.
 
 Replace your default images. The database only stores the name of the image file, for example "default_front.png". When you send out the initial emails, "default_front.png" may have been an imge of a cute kitty with a watermark saying "sample image" (that is the default that we provide in this repository) to encourage everyone to send in their own image. However, it would be unprofessional to print that on the real badges. So, just replace the file "default_front.png" with your conference logo for people who did not submit anything, and save it with the same filename. Run pdflatex again for every badge::
 
   >>> import badge_deamon
   >>> import sqlite3
+  >>> config, env = badge_deamon.setup_config_env('example_config.cfg')
   >>> conn = sqlite3.connect('badges.db')
   >>> c = conn.cursor()
-  >>> badge_deamon.prepare_badge_pdf(c, [i for i in range(123)])
+  >>> c.execute('SELECT regid FROM badges')
+  >>> for row in c.fetchall():
+  ...     badge_deamon.prepare_badge_pdf(c, row[0], config, env)
 
 Print one badge again to test that the paper size is correct (look for "scale to printible area" or similar settings in the pdf reader if it does not fit), then print them all! If the paper size is a little to bog or small, scale it a little in the printer dialog or adjust the LaTeX template and run the code above again to re-generate the pdfs.
 
