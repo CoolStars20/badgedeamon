@@ -69,7 +69,40 @@ Edit your copy of ``config_example.cfg`` to set the right file names and paths, 
 
 Initialize sqlite database ``badges.db``
 ----------------------------------------
-All information for the badges is stored in an `sqlite database <https://sqlite.org>`_. SQLite itself and Python routines to work with SQLite databases are part of the standard Python distribution, so you don't have to install anything special. SQLite databases are stored in a single, normal file on your disk and are perfect for small projects like this one. The Python code stores all information like name, registration number, affiliation, images submitted etc. in an SQLite database. Thus, before you can start, you need to set up the SQLite database and fill it with (at a minimum) registration numbers and email addresses, plus some defaults for the other fields in the database. 
+All information for the badges is stored in an `sqlite database
+<https://sqlite.org>`_. SQLite itself and Python routines to work with SQLite
+databases are part of the standard Python distribution, so you don't have to
+install anything special. SQLite databases are stored in a single, normal file
+on your disk and are perfect for small projects like this one. The Python code
+stores all information like name, registration number, affiliation, images
+submitted etc. in an SQLite database. Thus, before you can start, you need to
+set up the SQLite database.
+
+The python code requires the following fields in the database:
+
+- ``regid``: A unique number (or number/letter combination) for every
+  participant
+- ``email``: Email address
+- ``image1``: File name (without path) of image for front side of
+  badge. Initially, this needs to be set to that names of an existing image in
+  the image directory (see ``config_example.cfg``). For example, set this field
+  to ``kitty.jpeg`` and copy the ``kitty.jpeg`` file from the github repository
+  into your image directory.
+- ``image2``: File name for image on back side. Can be the same as ``image1``
+  (e.g. set to ``kitty.jpeg``, too).
+- (optional) ``role``: If this field is present, the code will add a field
+  ``rolecolor`` to the data that is passed into the rendering of the LaTeX
+  template. Colors are defined in the config file, see ``config_example.cfg``
+  for an explanation. If the ``role`` field is not present in your SQL
+  database, then this step is simply skipped.
+
+You can create as many fields as you like, for each badge and each email the
+code passes the entire row from the SQL table. The examples in this folder use
+the following extra fields:
+
+- ``pronoun``
+- ``name``
+- ``affil``
 
 To do that, you can work directly with `SQLite on the command line <http://www.sqlitetutorial.net/sqlite-import-csv/>`_, use any other scipt that might be handy, or write code in Python. As an example, this repository contains a file ``create_badge_table.py`` that shows how to read a csv file and write a ``badges.db`` file.  Our admin gave us a Microsoft Excel file with the registration information, so we exported it as csv and worked from there.
 
@@ -81,13 +114,15 @@ I set up a cronjob on my linux machine to run every 2 minutes. ``crontab -e`` op
 
    */2 * * * * /soft/anaconda/envs/py3/bin/python /data/myconference/badge_deamon.py /data/myconference/conference.conf
 
-The first part `*/2 * * * *` runs this command every two minutes for every hour, every day, every months, and every year. Note that I call Python with the full path to make sure I run Python 3 in the right environment (and not my system Python which is still Python 2). Depending on how your Python was installed, your path will be different. Then, I give the full absolute path to the badge deamon script and the configuration file
+The first part ``*/2 * * * *`` runs this command every two minutes for every hour, every day, every months, and every year. Note that I call Python with the full path to make sure I run Python 3 in the right environment (and not my system Python which is still Python 2). Depending on how your Python was installed, your path will be different. Then, I give the full absolute path to the badge deamon script and the configuration file
 
-If you ever need to pause and not run your script for a while, just run `crontab -e` again and add a `#` as first character of the line to comment it out.
+If you ever need to pause and not run your script for a while, just run
+``crontab -e`` again and add a ``#`` as first character of the line to comment
+out the line.
    
 Test
 ----
-Test. Test, and test again. Send an email to your email address to modify your own badge, add random pictures, use obscure LaTeX commands and see what happens. I guarantee that there will be typos in the path name or the password for your eamil account is not set correctly or there is some problem with your LaTeX template. The way the script is currently written, it does not preserve and show you the log, so it's a little hard ot find out what went wrong. (I appreciate your help to improve this.) So, I suggest to fill in your LaTeX template manually, run it with `pdflatex` and check that it works. You can also fire up an interactive Python session,  and then use and test the individual functions, e.g. try to connect to your email server and download any unread messages with::
+Test. Test, and test again. Send an email to your email address to modify your own badge, add random pictures, use obscure LaTeX commands and see what happens. I guarantee that there will be typos in the path name or the password for your eamil account is not set correctly or there is some problem with your LaTeX template. The way the script is currently written, it does not preserve and show you the log, so it's a little hard to find out what went wrong. (I appreciate your help to improve this.) So, I suggest to fill in your LaTeX template manually, run it with `pdflatex` and check that it works. You can also fire up an interactive Python session,  and then use and test the individual functions, e.g. try to connect to your email server and download any unread messages with::
 
   >>> import badge_deamon
   >>> out = badge_deamon.retrieve_new_messages()
@@ -139,7 +174,7 @@ Print one badge again to test that the paper size is correct (look for "scale to
 
 People may continue to send you emails until the conference starts. So, we changed the text of our email template, adding *Unfortunately, we printed the badges already. You can continue to update your name and images but you need to print out the badge yourself and bring it with you to the registtration desk*. Then, we activated the cron job again. About a dozen people printed their own badges and we used their printouts at the registration.
 
-A note about paper: We just printed on standard laser printer paper with front and back page next to each other, cut it out, and folded the paper. That way each badge can (i) still be read if it flips around and (ii) has two layers of paper. If you want to print front and back, you need to adjust our LaTeX template and also use a thicker cardstock paper. You can also get perforadted paper in the right size, e.g. `this <https://www.marcopromos.com/Product/Premium-Blank-Laser-Insert-Stock---6-x-4---White---Pack-of-500-A-8LI-P-WE-153477.htm>`_.
+A note about paper: We just printed on standard laser printer paper with front and back page next to each other, cut it out, and folded the paper. That way each badge can (i) still be read if it flips around and (ii) has two layers of paper. If you want to print front and back, you need to adjust our LaTeX template and also use a thicker cardstock paper. You can also get perforated paper in the right size, e.g. `this <https://www.marcopromos.com/Product/Premium-Blank-Laser-Insert-Stock---6-x-4---White---Pack-of-500-A-8LI-P-WE-153477.htm>`_.
 
 
 Other changes to the database
@@ -151,7 +186,7 @@ If you need to do things to the SQLite database (e.g. add new registrations, add
 
 If you don't type that, your commits won't be saved. 
   
-Also, stop the cron job. I chose a real database for this job (and not e.g. just a csv table) because it's possible to access the same database form different processes at the same time. However, you can read from the database easily, but if you do a change, it's lokced to other processes, until you do `conn.commit()`. If `badge_bot.py` processes a new email and trys to update the database and the database does not become unlocked within a few seconds, it will silently fail, so, unless you type really fast, better pause the cron job while you do complex changes to your database by hand.
+Also, stop the cron job. I chose a real database for this job (and not e.g. just a csv table) because it's possible to access the same database form different processes at the same time. However, you can read from the database easily, but if you do a change, it's lokced to other processes, until you do ``conn.commit()``. If ``badge_bot.py`` processes a new email and trys to update the database and the database does not become unlocked within a few seconds, it will silently fail, so, unless you type really fast, better pause the cron job while you do complex changes to your database by hand.
 
 Check out the `Python documentation for SQLite <https://docs.python.org/3/library/sqlite3.html>`_ and the `SQLite documentation <https://sqlite.org/lang.html>`_ for help how to add columns, add more rows, etc.
 
@@ -159,7 +194,10 @@ Possible problems and security
 ==============================
 This script has a number of issues that an attacker could use to disturb your operation. For Cool Stars none of the following attacks happened and most people who want to attend your conference will probably play nice. In the end, this is not a crucial application. If it fails, you can still print badges with a standard image for everyone. However, I want to list a few problems that I am aware of here so you can look out for it - I also appreciate pull requests to improve the code:
 
-- Name changes: People could change their name to anything, not just from "Hans Guenther" to "Hans M. Guenther", but also to "Kim Smith". We did not allow transfer of a registration to somebody else, so I looked at the initial names in the database and the final names after all changes that took me about 5 min for 500 people.
+- Name changes: People could change their name to anything, not just from "Hans
+  Guenther" to "Hans M. Guenther", but also to "Kim Smith". We did not allow
+  transfer of a registration to somebody else, so I looked by hand at the
+  initial names in the database (does not take long).
 - Offensive content: We looked at every badge as we printed it and cut the paper (about 1 hour to flip though a pdf with 500 draft badges). If we had seen any image that violated our Code of Conduct, we would have replaced it with a blank badge but that did not come up.
 - Attendees who don't care: We had about a dozen (2% of all attendees) badges that where obviously wrong or unreadable (e.g. affiliation so long that it runs off the page or attendee name="New Name here: New name here"). Either those people did not bother to check that their badge come out right or they missed our email in their spam filter or because they were on vacation or something. We fixed those by hand before we printed the badges (as I said in the last point, we flipped through a large pdf with all badges before we printed it).
 - email spam: The script processes and answers every email. If an attendee has a script that answers back, you can fire back and forth and quickly reach the 500 email per day limit. Fortunately, automatic "vacation reply" email typically don't do that.
@@ -178,4 +216,4 @@ Acknowledgements
 ================
 The idea to customize images for conference badges is not mine. I saw that in a Harvard-Heidelberg Workshop organized by Alyssa Goodman, who in turn borrowed that idea from Felice Frankel. Felice has used it for a number of conferences since 2001.
 
-Note that we are not affiliated in any way with any of the sellers of badge holders etc. linkes above. Do your own research. I just want to give an example how these things might look.
+Note that we are not affiliated in any way with any of the sellers of badge holders etc. linked above. Do your own research. I just want to give an example how these things might look.
