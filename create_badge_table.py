@@ -8,9 +8,7 @@ conn = sqlite3.connect('badges.db')
 c = conn.cursor()
 # Create table
 c.execute('''CREATE TABLE badges
-             (regid integer, pronoun text, name text, affil text, image1 text, image2 text, email text, title text)''')
-
-tab['Institution'][tab['Institution'].mask] = ''
+             (regid text, pronoun text, name text, affil text, image1 text, image2 text, email text, role text)''')
 
 for row in tab:
     text = ''
