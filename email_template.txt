@@ -1,4 +1,4 @@
-Dear {{name}},
+Dear {{data['name']}},
 
 {% if warntext %}
 Processing your previous email returned:
@@ -29,10 +29,10 @@ You can also edit your information below. Use LaTeX for markup, but don't
 change the BADGE XXX part of the line or our automatic program won't be able to
 parse the email.
 
-BADGE PRONOUN: {{pronoun}}
+BADGE PRONOUN: {{data['pronoun']}}
 (leave empty if you don't want to set a pronoun on the badge.)
-BADGE NAME: {{name}}
-BADGE AFFILIATION: {{affil}}
+BADGE NAME: {{data['name']}}
+BADGE AFFILIATION: {{data['affil']}}
 
 TO CHANGE THE IMAGE, simply attach one or two jpeg, png, or pdf files to your reply.
 

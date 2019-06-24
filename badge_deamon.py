@@ -186,7 +186,7 @@ def compose_email(data, config, env, warntext=''):
     msg['From'] = config['email']['address']
     msg['To'] = data['email']
     msg['Subject'] = config['email subject']['subject'].format(data['regid'])
-    msg.set_content(template.render(data, warntext=warntext))
+    msg.set_content(template.render(data=data, warntext=warntext))
     msg.preamble = 'PDF file is attached, but it seems your email reader is not MIME aware.\n'
 
     with open(os.path.join(config['path']['badge_dir'], 'badge_{}.pdf'.format(data['regid'])), 'rb') as fp:
