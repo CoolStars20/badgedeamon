@@ -205,10 +205,8 @@ def prepare_badge_email(c, regid, config, env, warntext=''):
     data = {c.description[i][0]: row[i] for i in range(len(row))}
     if 'role' in data.keys():
         # defauls to black is role is not in config
-        warn('role: {} not in config - using black as color'.format(data['role']))
         data['rolecolor'] = config['color'].get(data['role'], 'black')
-    data['regid'] = regid
-
+        data['rolecolortext'] = config['colortext'].get(data['role'], 'white')
     compile_pdf(data, config, env)
     msg = compose_email(data, config, env, warntext)
     return msg
@@ -245,6 +243,7 @@ def retrieve_new_messages(config):
                 raise Exception('Error fetching mail.')
             messagelist.append(messageParts)
     return messagelist
+
 
 def forward_email(mail, config):
     mail.replace_header('From', config['email']['address'])

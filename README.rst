@@ -90,11 +90,11 @@ The python code requires the following fields in the database:
   into your image directory.
 - ``image2``: File name for image on back side. Can be the same as ``image1``
   (e.g. set to ``kitty.jpeg``, too).
-- (optional) ``role``: If this field is present, the code will add a field
-  ``rolecolor`` to the data that is passed into the rendering of the LaTeX
-  template. Colors are defined in the config file, see ``config_example.cfg``
-  for an explanation. If the ``role`` field is not present in your SQL
-  database, then this step is simply skipped.
+- (optional) ``role``: If this field is present, the code will add fields
+  ``rolecolor`` and ``rolecolortext`` to the data that is passed into the
+  rendering of the LaTeX  template. Colors are defined in the config file, see
+  ``config_example.cfg`` for an explanation. If the ``role`` field is not
+  present in your SQL database, then this step is simply skipped.
 
 You can create as many fields as you like, for each badge and each email the
 code passes the entire row from the SQL table. The examples in this folder use

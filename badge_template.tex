@@ -1,6 +1,9 @@
-% Example Jinja 2 template for a confernece badge
+% Example Jinja 2 template for a conference badge
 
-% ``data'' is a row fomr your sql table with all the fields, e.g.
+% Modify for your badge (e.g. replace headerimage in the includegraphics
+% command with your image)
+
+% ``data'' is a row from your sql table with all the fields, e.g.
 % data['name'] matching the column names in the SQL table.
 
 % Macro BADGE
@@ -55,7 +58,7 @@
     \end{minipage}
     {% if data['role'] %}
      \begin{minipage}[t][0.6in][c]{4.2in}
-       \begin{tcolorbox}[width=0.98\textwidth,colback={{'{'}}{{data['rolecolor']}}{{'}'}},colupper=white]
+       \begin{tcolorbox}[width=0.98\textwidth,colback={{'{'}}{{data['rolecolor']}}{{'}'}},colupper={{'{'}}{{data['rolecolortext']}}{{'}'}}]
            \centering
            {\bf \huge {{data['role']}} }
          \end{tcolorbox}
