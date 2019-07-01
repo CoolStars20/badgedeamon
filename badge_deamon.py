@@ -8,6 +8,7 @@ import re
 import sqlite3
 import imaplib
 import email
+import email.header
 import configparser
 import argparse
 
@@ -288,7 +289,11 @@ def process_new_messages(conn, c, messages, config, env):
     for messageParts in messages:
         emailBody = messageParts[0][1]
         mail = email.message_from_bytes(emailBody)
-        match = reg_subject.search(mail['SUBJECT'])
+        subject = mail['SUBJECT']
+        # Header may as characters that are utf-8 formated
+        dh = email.header.decode_header(mail['SUBJECT'])
+        dsubject = ''.join([ t[0].decode(t[1] or 'ASCII') for t in dh ])
+        match = reg_subject.search(dsubject)
         if (match is None) or not regid_known(c, match.groups('id')[0]):
             # Header does not have message ID in it
             forward_email(mail, config)
