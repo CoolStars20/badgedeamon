@@ -4,6 +4,7 @@ import subprocess
 import shutil
 from tempfile import TemporaryDirectory
 from email.message import EmailMessage
+from email.header import decode_header, make_header
 import re
 import sqlite3
 import imaplib
@@ -291,9 +292,8 @@ def process_new_messages(conn, c, messages, config, env):
         mail = email.message_from_bytes(emailBody)
         subject = mail['SUBJECT']
         # Header may as characters that are utf-8 formated
-        dh = email.header.decode_header(mail['SUBJECT'])
-        dsubject = ''.join([ t[0].decode(t[1] or 'ASCII') for t in dh ])
-        match = reg_subject.search(dsubject)
+        dh = str(make_header(decode_header(mail['SUBJECT'])))
+        match = reg_subject.search(dh)
         if (match is None) or not regid_known(c, match.groups('id')[0]):
             # Header does not have message ID in it
             forward_email(mail, config)
